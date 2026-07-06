@@ -7,15 +7,25 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private InventorySlotView slotPrefab;
 
     [SerializeField] private float cellSize = 64f;
-
+    public static InventoryUI Instance = null;
     private InventorySlotView[,] slots;
-
+    public GameObject InvenUI;
+    private void Awake()
+    {
+        Instance = this;
+        DontDestroyOnLoad(this.gameObject);
+    }
     private void Start()
     {
 
         CreateSlots();
     }
-
+    public void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.Tab)) {
+            InvenUI.SetActive(!InvenUI.activeSelf);
+        }
+    }
     private void CreateSlots()
     {
         int width = inventoryManager.gridWidth;
