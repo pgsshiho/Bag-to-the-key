@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class InventoryGrid
 {
     public int width;
@@ -10,6 +12,24 @@ public class InventoryGrid
         this.width = width;
         this.height = height;
         cells = new ItemInstance[width, height];
+    }
+
+    public bool TryFindSpace(ItemInstance item, out Vector2Int position)
+    {
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (CanPlace(item, x, y))
+                {
+                    position = new Vector2Int(x, y);
+                    return true;
+                }
+            }
+        }
+
+        position = new Vector2Int(-1, -1);
+        return false;
     }
 
     public bool CanPlace(ItemInstance item, int x, int y)
@@ -35,6 +55,9 @@ public class InventoryGrid
         if (!CanPlace(item, x, y))
             return;
 
+        item.x = x;
+        item.y = y;
+
         for (int ix = 0; ix < item.Width; ix++)
         {
             for (int iy = 0; iy < item.Height; iy++)
@@ -54,13 +77,5 @@ public class InventoryGrid
                     cells[x, y] = null;
             }
         }
-    }
-
-    public ItemInstance GetItemAt(int x, int y)
-    {
-        if (x < 0 || y < 0 || x >= width || y >= height)
-            return null;
-
-        return cells[x, y];
     }
 }

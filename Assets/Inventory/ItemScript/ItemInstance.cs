@@ -3,6 +3,9 @@ public class ItemInstance
     public ItemData data;
     public bool rotated;
 
+    public int x;
+    public int y;
+
     public int Width => rotated ? data.height : data.width;
     public int Height => rotated ? data.width : data.height;
 
