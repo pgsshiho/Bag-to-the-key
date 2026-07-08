@@ -36,4 +36,25 @@ public class InventoryManager : MonoBehaviour
         Debug.Log($"{itemData.itemName} 넣을 공간 없음");
         return false;
     }
+    public void Clear()
+    {
+        grid = new InventoryGrid(gridWidth, gridHeight);
+        items.Clear();
+
+        OnInventoryChanged?.Invoke();
+    }
+
+    public void AddLoadedItem(ItemData itemData, int x, int y, bool rotated)
+    {
+        ItemInstance item = new ItemInstance(itemData);
+        item.rotated = rotated;
+
+        if (grid.CanPlace(item, x, y))
+        {
+            grid.Place(item, x, y);
+            items.Add(item);
+        }
+
+        OnInventoryChanged?.Invoke();
+    }
 }
