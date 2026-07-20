@@ -17,11 +17,15 @@ AudioMixerController:
   m_UpdateMode: 0
   m_ExposedParameters:
   - guid: ec98681c8237f934296df41295cbcf87
-    name: MyExposedParam 1
-  - guid: 99bc7cfcac6e3234a934e08dfcb8d5b6
-    name: MyExposedParam
+    name: BGM
+  - guid: a5b5ac2ad2517724ea28be980850f329
+    name: MyExposedParam 4
+  - guid: 0a8354d7de55e734e9e618bff3f14970
+    name: Master
   - guid: 6043fe22f5c84214b804086848b578e5
-    name: MyExposedParam 2
+    name: SFX
+  - guid: ada6215244e0b924d88f7f46abbfb020
+    name: MyExposedParam 5
   m_AudioMixerGroupViews:
   - guids:
     - ab922f0bd8cd6634da8b4cd000b51077
@@ -50,7 +54,7 @@ AudioMixerGroupController:
   m_UserColorIndex: 0
   m_Mute: 0
   m_Solo: 0
-  m_BypassEffects: 0
+  m_BypassEffects: 1
 --- !u!244 &24400004
 AudioMixerEffectController:
   m_ObjectHideFlags: 3
