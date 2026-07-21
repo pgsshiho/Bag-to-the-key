@@ -11,6 +11,8 @@ public class SaveData
     public Vector3Data cameraRotation;
 
     public List<InventoryItemSaveData> inventoryItems = new List<InventoryItemSaveData>();
+    public List<string> discoveredItemIds = new List<string>();
+    public List<string> discoveredRecipeIds = new List<string>();
 }
 
 [Serializable]
@@ -20,6 +22,7 @@ public class InventoryItemSaveData
     public int x;
     public int y;
     public bool rotated;
+    public string createdByRecipeId;
 }
 
 [Serializable]
