@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f5a8ab1ffab23cc4899833ff1c092832, type: 3}
-  m_Name: Gun
+  m_Name: Dynamite
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemId: gun
-  itemName: Gun
-  description: Inventory placement test item
-  icon: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  itemId: dynamite
+  itemName: Dynamite
+  description: Gunpowder tied tightly with rope.
+  icon: {fileID: 0}
   width: 2
   height: 2

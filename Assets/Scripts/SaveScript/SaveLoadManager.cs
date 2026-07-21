@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 
 public class SaveLoadManager : MonoBehaviour
 {
+    private static SaveLoadManager instance;
+
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private ItemDatabase itemDatabase;
     [SerializeField] private Camera targetCamera;
@@ -13,25 +15,40 @@ public class SaveLoadManager : MonoBehaviour
 
     private void Awake()
     {
-        if (targetCamera == null)
-            targetCamera = Camera.main;
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+        if (targetCamera == null) targetCamera = Camera.main;
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F5))
-            SaveGame();
-
-        if (Input.GetKeyDown(KeyCode.F9))
-            LoadGame();
+        if (Input.GetKeyDown(KeyCode.F5)) SaveGame();
+        if (Input.GetKeyDown(KeyCode.F9)) LoadGame();
     }
 
     public void SaveGame()
     {
-        SaveData data = new SaveData();
+        if (inventoryManager == null)
+            inventoryManager = FindAnyObjectByType<InventoryManager>();
 
-        data.sceneName = SceneManager.GetActiveScene().name;
+        if (inventoryManager == null)
+        {
+            Debug.LogWarning("InventoryManager가 없어 저장할 수 없습니다.");
+            return;
+        }
 
+        SaveData data = new SaveData
+        {
+            sceneName = SceneManager.GetActiveScene().name
+        };
+
+        if (targetCamera == null) targetCamera = Camera.main;
         if (targetCamera != null)
         {
             data.cameraPosition = new Vector3Data(targetCamera.transform.position);
@@ -40,18 +57,22 @@ public class SaveLoadManager : MonoBehaviour
 
         foreach (ItemInstance item in inventoryManager.items)
         {
-            InventoryItemSaveData itemData = new InventoryItemSaveData();
-            itemData.itemId = item.data.itemId;
-            itemData.x = item.x;
-            itemData.y = item.y;
-            itemData.rotated = item.rotated;
-
-            data.inventoryItems.Add(itemData);
+            data.inventoryItems.Add(new InventoryItemSaveData
+            {
+                itemId = item.data.itemId,
+                x = item.x,
+                y = item.y,
+                rotated = item.rotated,
+                createdByRecipeId = item.createdByRecipeId
+            });
         }
+
+        DiscoveryManager discovery = DiscoveryManager.GetOrCreate();
+        data.discoveredItemIds.AddRange(discovery.DiscoveredItemIds);
+        data.discoveredRecipeIds.AddRange(discovery.DiscoveredRecipeIds);
 
         string json = JsonUtility.ToJson(data, true);
         File.WriteAllText(SavePath, json);
-
         Debug.Log($"저장 완료: {SavePath}");
     }
 
@@ -65,37 +86,45 @@ public class SaveLoadManager : MonoBehaviour
 
         string json = File.ReadAllText(SavePath);
         SaveData data = JsonUtility.FromJson<SaveData>(json);
+        if (data == null || string.IsNullOrWhiteSpace(data.sceneName))
+        {
+            Debug.LogWarning("저장 파일이 손상됐습니다.");
+            return;
+        }
 
         StartCoroutine(LoadGameRoutine(data));
     }
 
     private IEnumerator LoadGameRoutine(SaveData data)
     {
-        string currentSceneName = SceneManager.GetActiveScene().name;
-
-        if (currentSceneName != data.sceneName)
+        if (SceneManager.GetActiveScene().name != data.sceneName)
         {
             yield return SceneManager.LoadSceneAsync(data.sceneName);
             yield return null;
         }
 
-        inventoryManager = FindObjectOfType<InventoryManager>();
+        inventoryManager = FindAnyObjectByType<InventoryManager>();
+        targetCamera = Camera.main;
 
-        if (targetCamera == null)
-            targetCamera = Camera.main;
-
-        if (targetCamera != null)
+        if (targetCamera != null && data.cameraPosition != null && data.cameraRotation != null)
         {
             targetCamera.transform.position = data.cameraPosition.ToVector3();
             targetCamera.transform.eulerAngles = data.cameraRotation.ToVector3();
         }
 
+        if (inventoryManager == null)
+        {
+            Debug.LogWarning("InventoryManager를 찾을 수 없어 로드를 중단합니다.");
+            yield break;
+        }
+
         inventoryManager.Clear();
+        if (data.inventoryItems == null)
+            data.inventoryItems = new System.Collections.Generic.List<InventoryItemSaveData>();
 
         foreach (InventoryItemSaveData savedItem in data.inventoryItems)
         {
-            ItemData itemData = itemDatabase.GetItemById(savedItem.itemId);
-
+            ItemData itemData = ResolveItem(savedItem.itemId);
             if (itemData == null)
             {
                 Debug.LogWarning($"ItemData를 찾을 수 없습니다: {savedItem.itemId}");
@@ -106,10 +135,29 @@ public class SaveLoadManager : MonoBehaviour
                 itemData,
                 savedItem.x,
                 savedItem.y,
-                savedItem.rotated
-            );
+                savedItem.rotated,
+                savedItem.createdByRecipeId);
         }
 
+        DiscoveryManager.GetOrCreate().Restore(
+            data.discoveredItemIds ?? new System.Collections.Generic.List<string>(),
+            data.discoveredRecipeIds ?? new System.Collections.Generic.List<string>());
         Debug.Log("로드 완료");
+    }
+
+    private ItemData ResolveItem(string itemId)
+    {
+        if (itemDatabase != null)
+        {
+            ItemData databaseItem = itemDatabase.GetItemById(itemId);
+            if (databaseItem != null) return databaseItem;
+        }
+
+        foreach (ItemData item in Resources.LoadAll<ItemData>(string.Empty))
+        {
+            if (item.itemId == itemId) return item;
+        }
+
+        return null;
     }
 }

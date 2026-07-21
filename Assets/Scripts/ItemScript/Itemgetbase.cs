@@ -1,23 +1,57 @@
 using UnityEngine;
 
-public class Itemgetbase : MonoBehaviour
+public class Itemgetbase : MonoBehaviour, IWorldInteractable
 {
     public ItemData item;
-    private GetItem _itemGetter;
+    [SerializeField] private InventoryManager inventoryManager;
 
-    void Awake()
+    private bool isPickingUp;
+
+    private void Awake()
     {
-        // 인터페이스로 GetComponent 접근 (유니티에서 인터페이스로 직접 제네릭 호출를 안전하게 지원하지 않을 수 있으므로 typeof 사용)
-        _itemGetter = GetComponent(typeof(GetItem)) as GetItem;
-        if (_itemGetter == null)
+        if (GetComponent<Collider>() == null && GetComponent<Collider2D>() == null)
+            gameObject.AddComponent<BoxCollider>();
+
+        ResolveInventory();
+    }
+
+    public void Interact()
+    {
+        TryPickup();
+    }
+
+    public bool TryPickup()
+    {
+        if (isPickingUp || item == null) return false;
+        if (inventoryManager == null) ResolveInventory();
+        if (inventoryManager == null)
         {
-            Debug.LogError($"IItemGetter 구현체가 필요합니다. GameObject '{gameObject.name}'에 IItemGetter를 구현한 컴포넌트를 추가하세요.");
+            Debug.LogWarning($"{name}: InventoryManager를 찾을 수 없습니다.");
+            return false;
         }
+
+        isPickingUp = true;
+        bool added = inventoryManager.AddItem(item);
+        if (!added)
+        {
+            isPickingUp = false;
+            return false;
+        }
+
+        DiscoveryManager.GetOrCreate().DiscoverItem(item);
+        gameObject.SetActive(false);
+        Destroy(gameObject);
+        return true;
     }
 
     public void GetItem()
     {
-        if (_itemGetter == null) return;
-        _itemGetter.GetItems(item);
+        TryPickup();
+    }
+
+    private void ResolveInventory()
+    {
+        if (inventoryManager == null)
+            inventoryManager = FindAnyObjectByType<InventoryManager>();
     }
 }

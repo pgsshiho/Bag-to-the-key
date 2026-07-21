@@ -14,6 +14,12 @@ public class ItemDatabase : ScriptableObject
                 return item;
         }
 
+        foreach (ItemData item in Resources.LoadAll<ItemData>(string.Empty))
+        {
+            if (item.itemId == itemId)
+                return item;
+        }
+
         return null;
     }
 }
