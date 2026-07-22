@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public enum InventoryPlacementState
@@ -8,7 +9,7 @@ public enum InventoryPlacementState
     Invalid
 }
 
-public class InventorySlotView : MonoBehaviour
+public class InventorySlotView : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
     public int x;
     public int y;
@@ -18,6 +19,7 @@ public class InventorySlotView : MonoBehaviour
 
     private Image image;
     private Color originalColor;
+    private InventoryUI inventoryUI;
 
     private void Awake()
     {
@@ -25,11 +27,28 @@ public class InventorySlotView : MonoBehaviour
         if (image != null) originalColor = image.color;
     }
 
-    public void Init(int x, int y)
+    public void Init(int x, int y, InventoryUI inventoryUI)
     {
         this.x = x;
         this.y = y;
+        this.inventoryUI = inventoryUI;
         name = $"Slot ({x}, {y})";
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Left)
+            inventoryUI?.HandleSlotClick(x, y);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        inventoryUI?.HandleSlotHover(x, y);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        inventoryUI?.HandleSlotExit(x, y);
     }
 
     public void SetHighlight(InventoryPlacementState state)
