@@ -38,6 +38,8 @@ public class InventoryUI : MonoBehaviour
     private RectTransform combinationOverlayContainer;
     private RectTransform disassemblyOverlayContainer;
 
+    public InventoryMoveMode MoveMode => InventoryControlSettings.MoveMode;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -54,14 +56,16 @@ public class InventoryUI : MonoBehaviour
     {
         if (inventoryManager != null)
             inventoryManager.OnInventoryChanged += RefreshItems;
+        InventoryControlSettings.OnMoveModeChanged += HandleMoveModeChanged;
     }
 
     private void OnDisable()
     {
-        CancelActiveDrag();
+        CancelActiveMove();
 
         if (inventoryManager != null)
             inventoryManager.OnInventoryChanged -= RefreshItems;
+        InventoryControlSettings.OnMoveModeChanged -= HandleMoveModeChanged;
     }
 
     private void OnDestroy()
@@ -94,9 +98,17 @@ public class InventoryUI : MonoBehaviour
 
     private void Update()
     {
+        if (invenUI.activeSelf
+            && MoveMode == InventoryMoveMode.ClickToClick
+            && activeDragItem != null
+            && activeDragView != null)
+        {
+            Drag(activeDragView, Input.mousePosition, lastEventCamera);
+        }
+
         if (Input.GetKeyUp(KeyCode.Escape))
         {
-            CancelActiveDrag();
+            CancelActiveMove();
             invenUI.SetActive(false);
             ClearSelection();
             return;
@@ -106,8 +118,23 @@ public class InventoryUI : MonoBehaviour
 
         if (activeDragItem == selectedItem)
         {
+            RectTransform activeRect = activeDragView != null
+                ? activeDragView.GetComponent<RectTransform>()
+                : null;
+            Vector2 oldSize = activeRect != null ? activeRect.sizeDelta : Vector2.one;
+            Vector2 normalizedGrab = new Vector2(
+                oldSize.x > 0f ? Mathf.Clamp01(-dragOffset.x / oldSize.x) : 0.5f,
+                oldSize.y > 0f ? Mathf.Clamp01(dragOffset.y / oldSize.y) : 0.5f);
+
             inventoryManager.RotateDetachedItem(selectedItem);
-            activeDragView.RefreshVisual();
+            activeDragView?.RefreshVisual();
+            if (activeRect != null)
+            {
+                Vector2 newSize = activeRect.sizeDelta;
+                dragOffset = new Vector2(
+                    -normalizedGrab.x * newSize.x,
+                    normalizedGrab.y * newSize.y);
+            }
             Drag(activeDragView, lastPointerPosition, lastEventCamera);
             return;
         }
@@ -117,7 +144,7 @@ public class InventoryUI : MonoBehaviour
 
     public void OpenBag()
     {
-        if (invenUI.activeSelf) CancelActiveDrag();
+        if (invenUI.activeSelf) CancelActiveMove();
         invenUI.SetActive(!invenUI.activeSelf);
         if (!invenUI.activeSelf) ClearSelection();
     }
@@ -129,20 +156,53 @@ public class InventoryUI : MonoBehaviour
         UpdateDisassemblyOverlay();
     }
 
+    public void HandleItemClick(
+        InventoryItemView view,
+        ItemInstance item,
+        Vector2 screenPosition,
+        Camera eventCamera)
+    {
+        if (item == null) return;
+
+        if (MoveMode == InventoryMoveMode.Drag)
+        {
+            SelectItem(item);
+            return;
+        }
+
+        if (activeDragItem != null)
+        {
+            bool clickedActiveItem = activeDragItem == item;
+            CancelActiveMove();
+            if (!clickedActiveItem) SelectItem(item);
+            return;
+        }
+
+        BeginClickMove(view, item, screenPosition, eventCamera);
+    }
+
+    public void HandleSlotClick(int x, int y)
+    {
+        if (MoveMode != InventoryMoveMode.ClickToClick || activeDragItem == null) return;
+        if (activeDragView == null) return;
+        Vector2Int previewPosition = AnchoredToGrid(
+            activeDragView.GetComponent<RectTransform>().anchoredPosition);
+        CompleteActiveMove(previewPosition.x, previewPosition.y);
+    }
+
+    public void HandleSlotHover(int x, int y)
+    {
+        // Click-to-click placement is previewed from the item following the cursor.
+    }
+
+    public void HandleSlotExit(int x, int y)
+    {
+        // Keep the current preview while the pointer crosses slot boundaries.
+    }
+
     public void BeginDrag(InventoryItemView view, ItemInstance item, Vector2 screenPosition, Camera eventCamera)
     {
-        if (activeDragItem != null || item == null) return;
-        if (!inventoryManager.BeginItemDrag(item)) return;
-
-        ClearCombinationOverlays();
-        ClearDisassemblyOverlay();
-
-        activeDragView = view;
-        activeDragItem = item;
-        selectedItem = item;
-        dragOriginalX = item.x;
-        dragOriginalY = item.y;
-        dragOriginalRotated = item.rotated;
+        if (MoveMode != InventoryMoveMode.Drag || !BeginMove(view, item)) return;
         lastPointerPosition = screenPosition;
         lastEventCamera = eventCamera;
 
@@ -176,28 +236,7 @@ public class InventoryUI : MonoBehaviour
 
         Drag(view, screenPosition, eventCamera);
         Vector2Int gridPosition = AnchoredToGrid(view.GetComponent<RectTransform>().anchoredPosition);
-        ItemInstance item = activeDragItem;
-        int originalX = dragOriginalX;
-        int originalY = dragOriginalY;
-        bool originalRotated = dragOriginalRotated;
-
-        activeDragView = null;
-        activeDragItem = null;
-        ClearPlacementPreview();
-        inventoryManager.CompleteItemDrag(
-            item,
-            gridPosition.x,
-            gridPosition.y,
-            originalX,
-            originalY,
-            originalRotated);
-    }
-
-    public void ShowDisassembleAction(ItemInstance item)
-    {
-        SelectItem(item);
-        if (combinationService != null && combinationService.TryDisassemble(item))
-            ClearSelection();
+        CompleteActiveMove(gridPosition.x, gridPosition.y);
     }
 
     public int GetUnknownRecipeCount(ItemData item)
@@ -249,7 +288,7 @@ public class InventoryUI : MonoBehaviour
             for (int x = 0; x < width; x++)
             {
                 InventorySlotView slot = Instantiate(slotPrefab, slotContainer);
-                slot.Init(x, y);
+                slot.Init(x, y, this);
 
                 RectTransform rect = slot.GetComponent<RectTransform>();
                 rect.anchorMin = new Vector2(0f, 1f);
@@ -316,11 +355,73 @@ public class InventoryUI : MonoBehaviour
         UpdateActionButtons();
     }
 
-    private void CancelActiveDrag()
+    private bool BeginMove(InventoryItemView view, ItemInstance item)
+    {
+        if (activeDragItem != null || item == null || view == null) return false;
+
+        dragOriginalX = item.x;
+        dragOriginalY = item.y;
+        dragOriginalRotated = item.rotated;
+        if (!inventoryManager.BeginItemDrag(item)) return false;
+
+        ClearCombinationOverlays();
+        ClearDisassemblyOverlay();
+        activeDragView = view;
+        activeDragItem = item;
+        selectedItem = item;
+        UpdateSelectionVisuals();
+        return true;
+    }
+
+    private void BeginClickMove(
+        InventoryItemView view,
+        ItemInstance item,
+        Vector2 screenPosition,
+        Camera eventCamera)
+    {
+        if (!BeginMove(view, item)) return;
+
+        lastPointerPosition = screenPosition;
+        lastEventCamera = eventCamera;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            itemContainer,
+            screenPosition,
+            eventCamera,
+            out Vector2 localPoint);
+        Vector2 pointerAnchored = LocalToAnchored(localPoint);
+        dragOffset = view.GetComponent<RectTransform>().anchoredPosition - pointerAnchored;
+        view.SetRaycastBlocking(false);
+        view.transform.SetAsLastSibling();
+        Drag(view, screenPosition, eventCamera);
+    }
+
+    private void CompleteActiveMove(int targetX, int targetY)
     {
         if (activeDragItem == null) return;
 
         ItemInstance item = activeDragItem;
+        int originalX = dragOriginalX;
+        int originalY = dragOriginalY;
+        bool originalRotated = dragOriginalRotated;
+        activeDragView?.SetRaycastBlocking(true);
+        activeDragView = null;
+        activeDragItem = null;
+        ClearPlacementPreview();
+        inventoryManager.CompleteItemDrag(
+            item,
+            targetX,
+            targetY,
+            originalX,
+            originalY,
+            originalRotated);
+    }
+
+    private void CancelActiveMove()
+    {
+        if (activeDragItem == null) return;
+
+        ItemInstance item = activeDragItem;
+        activeDragView?.SetRaycastBlocking(true);
         activeDragView = null;
         activeDragItem = null;
         ClearPlacementPreview();
@@ -331,6 +432,13 @@ public class InventoryUI : MonoBehaviour
             dragOriginalX,
             dragOriginalY,
             dragOriginalRotated);
+    }
+
+    private void HandleMoveModeChanged(InventoryMoveMode mode)
+    {
+        CancelActiveMove();
+        ClearPlacementPreview();
+        ClearSelection();
     }
 
     private void UpdateSelectionVisuals()

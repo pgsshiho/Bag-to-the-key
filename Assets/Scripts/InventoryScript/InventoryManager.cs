@@ -138,11 +138,17 @@ public class InventoryManager : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    public void AddLoadedItem(ItemData itemData, int x, int y, bool rotated, string createdByRecipeId = null)
+    public void AddLoadedItem(
+        ItemData itemData,
+        int x,
+        int y,
+        bool rotated,
+        string createdByRecipeId = null,
+        int createdByRecipeRotation = 0)
     {
         if (itemData == null) return;
 
-        ItemInstance item = new ItemInstance(itemData, createdByRecipeId)
+        ItemInstance item = new ItemInstance(itemData, createdByRecipeId, createdByRecipeRotation)
         {
             rotated = rotated
         };
