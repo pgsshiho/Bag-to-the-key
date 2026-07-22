@@ -48,15 +48,23 @@ public class InventoryItemView
         if (!EnsureInitialized() || item == null || item.data == null)
             return;
 
-        iconImage.sprite = item.data.icon;
-        iconImage.preserveAspect = true;
-        iconImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, item.rotated ? -90f : 0f);
-
         rectTransform.anchorMin = new Vector2(0f, 1f);
         rectTransform.anchorMax = new Vector2(0f, 1f);
         rectTransform.pivot = new Vector2(0f, 1f);
         rectTransform.sizeDelta = new Vector2(item.Width * cellSize, item.Height * cellSize);
         rectTransform.anchoredPosition = new Vector2(item.x * cellSize, -item.y * cellSize);
+
+        iconImage.sprite = item.data.icon;
+        iconImage.preserveAspect = true;
+        RectTransform iconRect = iconImage.rectTransform;
+        iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+        iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.anchoredPosition = Vector2.zero;
+        iconRect.sizeDelta = new Vector2(
+            Mathf.Max(0f, item.data.width * cellSize - 8f),
+            Mathf.Max(0f, item.data.height * cellSize - 8f));
+        iconRect.localEulerAngles = new Vector3(0f, 0f, item.rotated ? -90f : 0f);
 
         int unknownCount = inventoryUI != null ? inventoryUI.GetUnknownRecipeCount(item.data) : 0;
         unknownRecipeText.text = unknownCount > 0 ? $"? {unknownCount}" : string.Empty;
@@ -68,9 +76,14 @@ public class InventoryItemView
             selectionOutline.enabled = selected;
     }
 
+    public void SetRaycastBlocking(bool blocksRaycasts)
+    {
+        if (EnsureInitialized()) canvasGroup.blocksRaycasts = blocksRaycasts;
+    }
+
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (inventoryUI == null || item == null)
+        if (inventoryUI == null || item == null || inventoryUI.MoveMode != InventoryMoveMode.Drag)
             return;
         canvasGroup.blocksRaycasts = false;
         transform.SetAsLastSibling();
@@ -79,13 +92,15 @@ public class InventoryItemView
 
     public void OnDrag(PointerEventData eventData)
     {
-        inventoryUI?.Drag(this, eventData.position, eventData.pressEventCamera);
+        if (inventoryUI != null && inventoryUI.MoveMode == InventoryMoveMode.Drag)
+            inventoryUI.Drag(this, eventData.position, eventData.pressEventCamera);
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         canvasGroup.blocksRaycasts = true;
-        inventoryUI?.EndDrag(this, eventData.position, eventData.pressEventCamera);
+        if (inventoryUI != null && inventoryUI.MoveMode == InventoryMoveMode.Drag)
+            inventoryUI.EndDrag(this, eventData.position, eventData.pressEventCamera);
     }
 
     public void OnPointerClick(PointerEventData eventData)
@@ -93,9 +108,8 @@ public class InventoryItemView
         if (inventoryUI == null || item == null)
             return;
 
-        inventoryUI.SelectItem(item);
-        if (eventData.button == PointerEventData.InputButton.Right)
-            inventoryUI.ShowDisassembleAction(item);
+        if (eventData.button == PointerEventData.InputButton.Left)
+            inventoryUI.HandleItemClick(this, item, eventData.position, eventData.pressEventCamera);
     }
 
     private bool EnsureInitialized()

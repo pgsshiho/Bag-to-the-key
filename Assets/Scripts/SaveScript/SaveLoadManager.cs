@@ -63,7 +63,8 @@ public class SaveLoadManager : MonoBehaviour
                 x = item.x,
                 y = item.y,
                 rotated = item.rotated,
-                createdByRecipeId = item.createdByRecipeId
+                createdByRecipeId = item.createdByRecipeId,
+                createdByRecipeRotation = item.createdByRecipeRotation
             });
         }
 
@@ -136,7 +137,8 @@ public class SaveLoadManager : MonoBehaviour
                 savedItem.x,
                 savedItem.y,
                 savedItem.rotated,
-                savedItem.createdByRecipeId);
+                savedItem.createdByRecipeId,
+                savedItem.createdByRecipeRotation);
         }
 
         DiscoveryManager.GetOrCreate().Restore(

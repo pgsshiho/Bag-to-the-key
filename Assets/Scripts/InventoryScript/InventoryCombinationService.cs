@@ -5,12 +5,16 @@ using UnityEngine;
 public sealed class InventoryCombinationCandidate
 {
     public ItemRecipe Recipe { get; }
-    public IReadOnlyList<ItemInstance> MatchedItems { get; }
+    public ItemRecipeMatch Match { get; }
+    public IReadOnlyList<ItemInstance> MatchedItems => Match.MatchedItems;
+    public int QuarterTurns => Match.QuarterTurns;
+    public Vector2Int Origin => Match.Origin;
+    public Vector2Int Size => Match.Size;
 
-    public InventoryCombinationCandidate(ItemRecipe recipe, List<ItemInstance> matchedItems)
+    public InventoryCombinationCandidate(ItemRecipe recipe, ItemRecipeMatch match)
     {
         Recipe = recipe;
-        MatchedItems = matchedItems;
+        Match = match;
     }
 }
 
@@ -58,7 +62,7 @@ public class InventoryCombinationService : MonoBehaviour
             foreach (ItemRecipe recipe in recipeDatabase.Recipes)
             {
                 if (recipe == null) continue;
-                foreach (List<ItemInstance> match in recipe.FindMatches(inventoryManager.items))
+                foreach (ItemRecipeMatch match in recipe.FindMatches(inventoryManager.items))
                     candidates.Add(new InventoryCombinationCandidate(recipe, match));
             }
         }
@@ -89,8 +93,11 @@ public class InventoryCombinationService : MonoBehaviour
         foreach (ItemInstance item in matched)
             inventoryManager.RemoveItem(item, false);
 
-        ItemInstance result = new ItemInstance(recipe.result, recipe.recipeId);
-        bool placed = inventoryManager.TryAddInstance(result, snapshots[0].x, snapshots[0].y, false)
+        ItemInstance result = new ItemInstance(recipe.result, recipe.recipeId, candidate.QuarterTurns)
+        {
+            rotated = candidate.QuarterTurns % 2 == 1
+        };
+        bool placed = inventoryManager.TryAddInstance(result, candidate.Origin.x, candidate.Origin.y, false)
             || inventoryManager.TryAddInstanceToFirstSpace(result, false);
 
         if (!placed)
@@ -112,6 +119,10 @@ public class InventoryCombinationService : MonoBehaviour
         if (!CanDisassemble(composite)) return false;
 
         ItemRecipe recipe = recipeDatabase.GetById(composite.createdByRecipeId);
+        List<RecipeIngredientPlacement> placements = recipe.GetPlacements(
+            composite.createdByRecipeRotation,
+            out _);
+        if (placements.Count != recipe.ingredients.Count) return false;
 
         ItemSnapshot compositeSnapshot = new ItemSnapshot(composite);
         if (!inventoryManager.RemoveItem(composite, false)) return false;
@@ -119,15 +130,15 @@ public class InventoryCombinationService : MonoBehaviour
         List<ItemInstance> createdItems = new List<ItemInstance>();
         bool success = true;
 
-        foreach (RecipeIngredient ingredient in recipe.ingredients)
+        foreach (RecipeIngredientPlacement placement in placements)
         {
-            ItemInstance created = new ItemInstance(ingredient.item)
+            ItemInstance created = new ItemInstance(placement.Ingredient.item)
             {
-                rotated = ingredient.requireRotation && ingredient.rotated
+                rotated = placement.Rotated
             };
 
-            int preferredX = compositeSnapshot.x + ingredient.relativePosition.x;
-            int preferredY = compositeSnapshot.y + ingredient.relativePosition.y;
+            int preferredX = compositeSnapshot.x + placement.RelativePosition.x;
+            int preferredY = compositeSnapshot.y + placement.RelativePosition.y;
 
             bool placed = inventoryManager.TryAddInstance(created, preferredX, preferredY, false)
                 || inventoryManager.TryAddInstanceToFirstSpace(created, false);
@@ -196,28 +207,10 @@ public class InventoryCombinationService : MonoBehaviour
 
     private bool IsStillValid(InventoryCombinationCandidate candidate)
     {
-        if (candidate == null || candidate.Recipe == null || candidate.MatchedItems == null)
-            return false;
-
-        ItemRecipe recipe = candidate.Recipe;
-        if (recipe.ingredients == null || candidate.MatchedItems.Count != recipe.ingredients.Count)
-            return false;
-
-        ItemInstance first = candidate.MatchedItems[0];
-        if (first == null || !inventoryManager.items.Contains(first)) return false;
-
-        Vector2Int anchor = new Vector2Int(
-            first.x - recipe.ingredients[0].relativePosition.x,
-            first.y - recipe.ingredients[0].relativePosition.y);
-
-        for (int i = 0; i < recipe.ingredients.Count; i++)
-        {
-            ItemInstance item = candidate.MatchedItems[i];
-            if (item == null || !inventoryManager.items.Contains(item)) return false;
-            if (!recipe.ingredients[i].Matches(item, anchor)) return false;
-        }
-
-        return true;
+        return candidate != null
+            && candidate.Recipe != null
+            && candidate.Match != null
+            && candidate.Recipe.IsMatchValid(candidate.Match, inventoryManager.items);
     }
 
     private readonly struct ItemSnapshot

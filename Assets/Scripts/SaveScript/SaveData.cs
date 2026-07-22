@@ -23,6 +23,7 @@ public class InventoryItemSaveData
     public int y;
     public bool rotated;
     public string createdByRecipeId;
+    public int createdByRecipeRotation;
 }
 
 [Serializable]
