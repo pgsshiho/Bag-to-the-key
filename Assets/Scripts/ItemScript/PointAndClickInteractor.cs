@@ -30,6 +30,7 @@ public class PointAndClickInteractor : MonoBehaviour
 
     private void Update()
     {
+        if (InvestigationCameraController.IsWorldInteractionBlocked) return;
         if (!Input.GetMouseButtonDown(0)) return;
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
