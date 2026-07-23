@@ -20,6 +20,7 @@ public class InventoryUI : MonoBehaviour
         new Color(1f, 0.35f, 0.72f, 1f),
         new Color(0.45f, 1f, 0.35f, 1f)
     };
+    [SerializeField] private Color discardColor = new Color(0.55f, 0.16f, 0.12f, 1f);
 
     private InventorySlotView[,] slots;
     private InventoryCombinationService combinationService;
@@ -37,6 +38,7 @@ public class InventoryUI : MonoBehaviour
     private Text catalogText;
     private RectTransform combinationOverlayContainer;
     private RectTransform disassemblyOverlayContainer;
+    private RectTransform discardOverlayContainer;
 
     public InventoryMoveMode MoveMode => InventoryControlSettings.MoveMode;
 
@@ -88,6 +90,7 @@ public class InventoryUI : MonoBehaviour
         CreateSlots();
         EnsureCombinationOverlay();
         EnsureDisassemblyOverlay();
+        EnsureDiscardOverlay();
         EnsureCatalogUI();
         RefreshItems();
         combinationService?.RefreshCandidates();
@@ -153,7 +156,7 @@ public class InventoryUI : MonoBehaviour
     {
         selectedItem = item;
         UpdateSelectionVisuals();
-        UpdateDisassemblyOverlay();
+        UpdateActionButtons();
     }
 
     public void HandleItemClick(
@@ -268,6 +271,8 @@ public class InventoryUI : MonoBehaviour
             combinationOverlayContainer.SetAsLastSibling();
         if (disassemblyOverlayContainer != null)
             disassemblyOverlayContainer.SetAsLastSibling();
+        if (discardOverlayContainer != null)
+            discardOverlayContainer.SetAsLastSibling();
 
         UpdateActionButtons();
     }
@@ -366,6 +371,7 @@ public class InventoryUI : MonoBehaviour
 
         ClearCombinationOverlays();
         ClearDisassemblyOverlay();
+        ClearDiscardOverlay();
         activeDragView = view;
         activeDragItem = item;
         selectedItem = item;
@@ -483,6 +489,20 @@ public class InventoryUI : MonoBehaviour
         disassemblyOverlayContainer.SetAsLastSibling();
     }
 
+    private void EnsureDiscardOverlay()
+    {
+        if (discardOverlayContainer != null) return;
+
+        GameObject overlayObject = new GameObject("DiscardOverlay", typeof(RectTransform));
+        overlayObject.transform.SetParent(itemContainer, false);
+        discardOverlayContainer = overlayObject.GetComponent<RectTransform>();
+        discardOverlayContainer.anchorMin = Vector2.zero;
+        discardOverlayContainer.anchorMax = Vector2.one;
+        discardOverlayContainer.offsetMin = Vector2.zero;
+        discardOverlayContainer.offsetMax = Vector2.zero;
+        discardOverlayContainer.SetAsLastSibling();
+    }
+
     private void RenderCombinationCandidates(IReadOnlyList<InventoryCombinationCandidate> candidates)
     {
         EnsureCombinationOverlay();
@@ -499,6 +519,8 @@ public class InventoryUI : MonoBehaviour
         }
 
         combinationOverlayContainer.SetAsLastSibling();
+        if (discardOverlayContainer != null)
+            discardOverlayContainer.SetAsLastSibling();
     }
 
     private Color GetCombinationColor(int candidateIndex)
@@ -584,15 +606,17 @@ public class InventoryUI : MonoBehaviour
         RectTransform parent,
         Color color,
         string objectName,
-        string label)
+        string label,
+        bool attachToLeft = false)
     {
         GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
         buttonObject.transform.SetParent(parent, false);
         RectTransform rect = buttonObject.GetComponent<RectTransform>();
-        rect.anchorMin = Vector2.one;
-        rect.anchorMax = Vector2.one;
-        rect.pivot = new Vector2(0f, 1f);
-        rect.anchoredPosition = new Vector2(6f, 0f);
+        Vector2 topCorner = attachToLeft ? new Vector2(0f, 1f) : Vector2.one;
+        rect.anchorMin = topCorner;
+        rect.anchorMax = topCorner;
+        rect.pivot = attachToLeft ? Vector2.one : new Vector2(0f, 1f);
+        rect.anchoredPosition = new Vector2(attachToLeft ? -6f : 6f, 0f);
         rect.sizeDelta = new Vector2(76f, 36f);
 
         Image image = buttonObject.GetComponent<Image>();
@@ -652,6 +676,52 @@ public class InventoryUI : MonoBehaviour
     {
         if (disassemblyOverlayContainer == null) return;
         foreach (Transform child in disassemblyOverlayContainer)
+            Destroy(child.gameObject);
+    }
+
+    private void UpdateDiscardOverlay()
+    {
+        EnsureDiscardOverlay();
+        ClearDiscardOverlay();
+        if (selectedItem == null
+            || activeDragItem != null
+            || !inventoryManager.items.Contains(selectedItem))
+            return;
+
+        ItemInstance itemToDiscard = selectedItem;
+        GameObject overlayObject = new GameObject("DiscardCandidate", typeof(RectTransform));
+        overlayObject.transform.SetParent(discardOverlayContainer, false);
+        RectTransform overlayRect = overlayObject.GetComponent<RectTransform>();
+        overlayRect.anchorMin = new Vector2(0f, 1f);
+        overlayRect.anchorMax = new Vector2(0f, 1f);
+        overlayRect.pivot = new Vector2(0f, 1f);
+        overlayRect.anchoredPosition = new Vector2(
+            itemToDiscard.x * cellSize,
+            -itemToDiscard.y * cellSize);
+        overlayRect.sizeDelta = new Vector2(
+            itemToDiscard.Width * cellSize,
+            itemToDiscard.Height * cellSize);
+
+        Button button = CreateAttachedActionButton(
+            overlayRect,
+            discardColor,
+            "Discard",
+            "\uBC84\uB9AC\uAE30",
+            true);
+        button.onClick.AddListener(() =>
+        {
+            if (selectedItem != itemToDiscard || activeDragItem != null) return;
+            if (inventoryManager.DiscardItem(itemToDiscard))
+                ClearSelection();
+        });
+
+        discardOverlayContainer.SetAsLastSibling();
+    }
+
+    private void ClearDiscardOverlay()
+    {
+        if (discardOverlayContainer == null) return;
+        foreach (Transform child in discardOverlayContainer)
             Destroy(child.gameObject);
     }
 
@@ -750,5 +820,6 @@ public class InventoryUI : MonoBehaviour
     private void UpdateActionButtons()
     {
         UpdateDisassemblyOverlay();
+        UpdateDiscardOverlay();
     }
 }

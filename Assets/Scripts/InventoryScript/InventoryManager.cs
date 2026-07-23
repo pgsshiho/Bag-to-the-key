@@ -109,6 +109,11 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
+    public bool DiscardItem(ItemInstance item)
+    {
+        return RemoveItem(item);
+    }
+
     public bool TryAddInstance(ItemInstance item, int x, int y, bool notify = true)
     {
         if (item == null || items.Contains(item)) return false;
