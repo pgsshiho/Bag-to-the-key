@@ -7,9 +7,14 @@ public class InvestigationCameraController : MonoBehaviour
     public static InvestigationCameraController Instance { get; private set; }
 
     [Header("Cinemachine")]
-    [SerializeField] private CinemachineBrain brain;
-    [SerializeField] private CinemachineCamera defaultCamera;
-    [SerializeField] private CinemachineCamera investigationCamera;
+    [SerializeField]
+    private CinemachineBrain brain;
+
+    [SerializeField]
+    private CinemachineCamera defaultCamera;
+
+    [SerializeField]
+    private CinemachineCamera investigationCamera;
 
     private InvestigationPoint activePoint;
     private int idleInvestigationPriority;
@@ -18,9 +23,6 @@ public class InvestigationCameraController : MonoBehaviour
 
     public bool IsInvestigating => activePoint != null;
     public bool IsTransitioning => brain != null && brain.IsBlending;
-    public static bool IsWorldInteractionBlocked =>
-        Instance != null
-        && (Instance.IsInvestigating || Instance.IsTransitioning || Instance.isReturning);
 
     private void Awake()
     {
@@ -45,42 +47,49 @@ public class InvestigationCameraController : MonoBehaviour
         RestoreInvestigationPriority();
         activePoint = null;
         isReturning = false;
+        WorldInteractionGate.Unblock(this);
     }
 
     private void OnDestroy()
     {
-        if (Instance == this) Instance = null;
+        if (Instance == this)
+            Instance = null;
     }
 
     public bool TryFocus(InvestigationPoint point)
     {
-        if (point == null || point.ViewPoint == null) return false;
-        if (IsInvestigating || IsTransitioning || isReturning) return false;
+        if (point == null || point.ViewPoint == null)
+            return false;
+        if (IsInvestigating || IsTransitioning || isReturning)
+            return false;
         if (!HasRequiredReferences())
         {
             Debug.LogWarning(
                 "Investigation camera setup is incomplete. "
-                + "Assign Brain, Default Camera, and Investigation Camera in the Inspector.",
-                this);
+                    + "Assign Brain, Default Camera, and Investigation Camera in the Inspector.",
+                this
+            );
             return false;
         }
 
         CaptureInitialPriority();
         investigationCamera.transform.SetPositionAndRotation(
             point.ViewPoint.position,
-            point.ViewPoint.rotation);
+            point.ViewPoint.rotation
+        );
         investigationCamera.Lens.FieldOfView = point.FieldOfView;
-        investigationCamera.Priority = Mathf.Max(
-            defaultCamera.Priority.Value,
-            idleInvestigationPriority) + 1;
+        investigationCamera.Priority =
+            Mathf.Max(defaultCamera.Priority.Value, idleInvestigationPriority) + 1;
 
         activePoint = point;
+        WorldInteractionGate.Block(this);
         return true;
     }
 
     public bool ReturnToDefault()
     {
-        if (!IsInvestigating || IsTransitioning) return false;
+        if (!IsInvestigating || IsTransitioning)
+            return false;
 
         RestoreInvestigationPriority();
         activePoint = null;
@@ -95,6 +104,7 @@ public class InvestigationCameraController : MonoBehaviour
         while (brain != null && brain.IsBlending)
             yield return null;
         isReturning = false;
+        WorldInteractionGate.Unblock(this);
     }
 
     private bool HasRequiredReferences()
@@ -104,7 +114,8 @@ public class InvestigationCameraController : MonoBehaviour
 
     private void CaptureInitialPriority()
     {
-        if (capturedInitialPriority || investigationCamera == null) return;
+        if (capturedInitialPriority || investigationCamera == null)
+            return;
         idleInvestigationPriority = investigationCamera.Priority.Value;
         capturedInitialPriority = true;
     }
