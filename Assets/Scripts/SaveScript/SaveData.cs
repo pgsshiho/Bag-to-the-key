@@ -13,6 +13,9 @@ public class SaveData
     public List<InventoryItemSaveData> inventoryItems = new List<InventoryItemSaveData>();
     public List<string> discoveredItemIds = new List<string>();
     public List<string> discoveredRecipeIds = new List<string>();
+    public int moralityBalance;
+    public List<string> completedPuzzleIds = new List<string>();
+    public List<string> recordedOutcomeIds = new List<string>();
 }
 
 [Serializable]
