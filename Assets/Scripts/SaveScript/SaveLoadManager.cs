@@ -71,6 +71,9 @@ public class SaveLoadManager : MonoBehaviour
         DiscoveryManager discovery = DiscoveryManager.GetOrCreate();
         data.discoveredItemIds.AddRange(discovery.DiscoveredItemIds);
         data.discoveredRecipeIds.AddRange(discovery.DiscoveredRecipeIds);
+        data.moralityBalance = GameProgressState.MoralityBalance;
+        data.completedPuzzleIds.AddRange(GameProgressState.CompletedPuzzleIds);
+        data.recordedOutcomeIds.AddRange(GameProgressState.RecordedOutcomeIds);
 
         string json = JsonUtility.ToJson(data, true);
         File.WriteAllText(SavePath, json);
@@ -112,6 +115,11 @@ public class SaveLoadManager : MonoBehaviour
             targetCamera.transform.position = data.cameraPosition.ToVector3();
             targetCamera.transform.eulerAngles = data.cameraRotation.ToVector3();
         }
+
+        GameProgressState.Restore(
+            data.moralityBalance,
+            data.completedPuzzleIds,
+            data.recordedOutcomeIds);
 
         if (inventoryManager == null)
         {
