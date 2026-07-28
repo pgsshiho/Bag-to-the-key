@@ -5,6 +5,10 @@ using UnityEngine;
 [Serializable]
 public class SaveData
 {
+    public int formatVersion = 2;
+    public int slotNumber;
+    public bool isAutoSave;
+    public string savedAtUtc;
     public string sceneName;
 
     public Vector3Data cameraPosition;
@@ -16,6 +20,19 @@ public class SaveData
     public int moralityBalance;
     public List<string> completedPuzzleIds = new List<string>();
     public List<string> recordedOutcomeIds = new List<string>();
+}
+
+[Serializable]
+public class SaveSlotInfo
+{
+    public int slotNumber;
+    public bool isAutoSave;
+    public bool exists;
+    public bool isValid;
+    public string savedAtUtc;
+    public string sceneName;
+    public int moralityBalance;
+    public int inventoryItemCount;
 }
 
 [Serializable]
