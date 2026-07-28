@@ -1,17 +1,36 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class SaveLoadManager : MonoBehaviour
 {
+    public const int ManualSlotCount = 5;
+
     private static SaveLoadManager instance;
 
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private ItemDatabase itemDatabase;
     [SerializeField] private Camera targetCamera;
+    [SerializeField, Range(1, ManualSlotCount)] private int selectedManualSlot = 1;
+    [SerializeField, Min(0f)] private float autoSaveDelay = 0.75f;
+    [SerializeField] private string[] autoSaveExcludedScenes = { "Mainmenu" };
 
-    private string SavePath => Path.Combine(Application.persistentDataPath, "save.json");
+    private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
+    private Coroutine pendingAutoSave;
+    private InventoryManager subscribedInventoryManager;
+    private bool isLoading;
+
+    public static SaveLoadManager Instance => instance;
+    public int SelectedManualSlot => selectedManualSlot;
+    public event Action SaveSlotsChanged;
+
+    private string SaveDirectory => Path.Combine(Application.persistentDataPath, "Saves");
+    private string LegacySavePath => Path.Combine(Application.persistentDataPath, "save.json");
+    private string AutoSavePath => Path.Combine(SaveDirectory, "autosave.json");
 
     private void Awake()
     {
@@ -26,16 +45,87 @@ public class SaveLoadManager : MonoBehaviour
         if (targetCamera == null) targetCamera = Camera.main;
     }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void EnsureInstanceAfterFirstSceneLoad()
+    {
+        GetOrCreate();
+    }
+
+    public static SaveLoadManager GetOrCreate()
+    {
+        if (instance != null) return instance;
+
+        SaveLoadManager existing = FindAnyObjectByType<SaveLoadManager>();
+        if (existing != null) return existing;
+
+        GameObject managerObject = new GameObject(nameof(SaveLoadManager));
+        return managerObject.AddComponent<SaveLoadManager>();
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += HandleSceneLoaded;
+        GameProgressState.ProgressChanged += ScheduleAutoSave;
+    }
+
+    private IEnumerator Start()
+    {
+        yield return null;
+        RebindSceneReferences();
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+        GameProgressState.ProgressChanged -= ScheduleAutoSave;
+        SubscribeToInventory(null);
+    }
+
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F5)) SaveGame();
-        if (Input.GetKeyDown(KeyCode.F9)) LoadGame();
+        if (Input.GetKeyDown(KeyCode.F5)) OpenSaveMenu();
+        if (Input.GetKeyDown(KeyCode.F9)) OpenLoadMenu();
+    }
+
+    public void OpenSaveMenu()
+    {
+        SaveSlotMenuController.GetOrCreate().Show(this, SaveSlotMenuMode.Save);
+    }
+
+    public void OpenLoadMenu()
+    {
+        SaveSlotMenuController.GetOrCreate().Show(this, SaveSlotMenuMode.Load);
     }
 
     public void SaveGame()
     {
+        SaveGame(selectedManualSlot);
+    }
+
+    public void SaveGame(int slotNumber)
+    {
+        if (!IsValidManualSlot(slotNumber))
+        {
+            Debug.LogWarning($"저장 슬롯은 1부터 {ManualSlotCount}까지 선택할 수 있습니다.");
+            return;
+        }
+
+        selectedManualSlot = slotNumber;
+        SaveGameInternal(GetManualSavePath(slotNumber), slotNumber, false);
+    }
+
+    public void AutoSaveGame()
+    {
+        if (isLoading || IsAutoSaveExcludedScene(SceneManager.GetActiveScene().name))
+            return;
+
+        SaveGameInternal(AutoSavePath, 0, true);
+    }
+
+    private void SaveGameInternal(string path, int slotNumber, bool isAutoSave)
+    {
         if (inventoryManager == null)
-            inventoryManager = FindAnyObjectByType<InventoryManager>();
+            RebindSceneReferences();
 
         if (inventoryManager == null)
         {
@@ -45,6 +135,9 @@ public class SaveLoadManager : MonoBehaviour
 
         SaveData data = new SaveData
         {
+            slotNumber = slotNumber,
+            isAutoSave = isAutoSave,
+            savedAtUtc = DateTime.UtcNow.ToString("O"),
             sceneName = SceneManager.GetActiveScene().name
         };
 
@@ -76,26 +169,88 @@ public class SaveLoadManager : MonoBehaviour
         data.recordedOutcomeIds.AddRange(GameProgressState.RecordedOutcomeIds);
 
         string json = JsonUtility.ToJson(data, true);
-        File.WriteAllText(SavePath, json);
-        Debug.Log($"저장 완료: {SavePath}");
+        Directory.CreateDirectory(SaveDirectory);
+        File.WriteAllText(path, json, Utf8);
+        Debug.Log($"{(isAutoSave ? "자동 저장" : $"{slotNumber}번 슬롯 저장")} 완료: {path}");
+        SaveSlotsChanged?.Invoke();
     }
 
     public void LoadGame()
     {
-        if (!File.Exists(SavePath))
+        LoadGame(selectedManualSlot);
+    }
+
+    public void LoadGame(int slotNumber)
+    {
+        if (!IsValidManualSlot(slotNumber))
+        {
+            Debug.LogWarning($"불러오기 슬롯은 1부터 {ManualSlotCount}까지 선택할 수 있습니다.");
+            return;
+        }
+
+        selectedManualSlot = slotNumber;
+        string path = GetManualSavePath(slotNumber);
+        if (!File.Exists(path) && slotNumber == 1 && File.Exists(LegacySavePath))
+            path = LegacySavePath;
+
+        LoadGameFromPath(path);
+    }
+
+    public void LoadAutoSave()
+    {
+        LoadGameFromPath(AutoSavePath);
+    }
+
+    public SaveSlotInfo[] GetSaveSlots()
+    {
+        SaveSlotInfo[] slots = new SaveSlotInfo[ManualSlotCount + 1];
+        for (int slotNumber = 1; slotNumber <= ManualSlotCount; slotNumber++)
+        {
+            string path = GetManualSavePath(slotNumber);
+            if (!File.Exists(path) && slotNumber == 1 && File.Exists(LegacySavePath))
+                path = LegacySavePath;
+
+            slots[slotNumber - 1] = ReadSlotInfo(path, slotNumber, false);
+        }
+
+        slots[ManualSlotCount] = ReadSlotInfo(AutoSavePath, 0, true);
+        return slots;
+    }
+
+    public bool HasManualSave(int slotNumber)
+    {
+        if (!IsValidManualSlot(slotNumber)) return false;
+        return File.Exists(GetManualSavePath(slotNumber))
+            || (slotNumber == 1 && File.Exists(LegacySavePath));
+    }
+
+    public bool HasAutoSave()
+    {
+        return File.Exists(AutoSavePath);
+    }
+
+    public void SelectManualSlot(int slotNumber)
+    {
+        if (IsValidManualSlot(slotNumber))
+            selectedManualSlot = slotNumber;
+    }
+
+    private void LoadGameFromPath(string path)
+    {
+        if (!File.Exists(path))
         {
             Debug.Log("저장 파일이 없습니다.");
             return;
         }
 
-        string json = File.ReadAllText(SavePath);
-        SaveData data = JsonUtility.FromJson<SaveData>(json);
-        if (data == null || string.IsNullOrWhiteSpace(data.sceneName))
+        if (!TryReadSaveData(path, out SaveData data))
         {
             Debug.LogWarning("저장 파일이 손상됐습니다.");
             return;
         }
 
+        isLoading = true;
+        CancelPendingAutoSave();
         StartCoroutine(LoadGameRoutine(data));
     }
 
@@ -109,6 +264,7 @@ public class SaveLoadManager : MonoBehaviour
 
         inventoryManager = FindAnyObjectByType<InventoryManager>();
         targetCamera = Camera.main;
+        SubscribeToInventory(inventoryManager);
 
         if (targetCamera != null && data.cameraPosition != null && data.cameraRotation != null)
         {
@@ -124,6 +280,7 @@ public class SaveLoadManager : MonoBehaviour
         if (inventoryManager == null)
         {
             Debug.LogWarning("InventoryManager를 찾을 수 없어 로드를 중단합니다.");
+            isLoading = false;
             yield break;
         }
 
@@ -150,9 +307,121 @@ public class SaveLoadManager : MonoBehaviour
         }
 
         DiscoveryManager.GetOrCreate().Restore(
-            data.discoveredItemIds ?? new System.Collections.Generic.List<string>(),
-            data.discoveredRecipeIds ?? new System.Collections.Generic.List<string>());
+            data.discoveredItemIds ?? new List<string>(),
+            data.discoveredRecipeIds ?? new List<string>());
+        isLoading = false;
         Debug.Log("로드 완료");
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        RebindSceneReferences();
+        if (!isLoading)
+            ScheduleAutoSave();
+    }
+
+    private void RebindSceneReferences()
+    {
+        inventoryManager = FindAnyObjectByType<InventoryManager>();
+        targetCamera = Camera.main;
+        SubscribeToInventory(inventoryManager);
+    }
+
+    private void SubscribeToInventory(InventoryManager manager)
+    {
+        if (subscribedInventoryManager == manager) return;
+
+        if (subscribedInventoryManager != null)
+            subscribedInventoryManager.OnInventoryChanged -= ScheduleAutoSave;
+
+        subscribedInventoryManager = manager;
+        if (subscribedInventoryManager != null)
+            subscribedInventoryManager.OnInventoryChanged += ScheduleAutoSave;
+    }
+
+    private void ScheduleAutoSave()
+    {
+        if (isLoading || inventoryManager == null
+            || IsAutoSaveExcludedScene(SceneManager.GetActiveScene().name))
+            return;
+
+        CancelPendingAutoSave();
+        pendingAutoSave = StartCoroutine(AutoSaveAfterDelay());
+    }
+
+    private IEnumerator AutoSaveAfterDelay()
+    {
+        if (autoSaveDelay > 0f)
+            yield return new WaitForSecondsRealtime(autoSaveDelay);
+
+        pendingAutoSave = null;
+        AutoSaveGame();
+    }
+
+    private void CancelPendingAutoSave()
+    {
+        if (pendingAutoSave == null) return;
+        StopCoroutine(pendingAutoSave);
+        pendingAutoSave = null;
+    }
+
+    private SaveSlotInfo ReadSlotInfo(string path, int slotNumber, bool isAutoSave)
+    {
+        SaveSlotInfo info = new SaveSlotInfo
+        {
+            slotNumber = slotNumber,
+            isAutoSave = isAutoSave,
+            exists = File.Exists(path)
+        };
+
+        if (!info.exists || !TryReadSaveData(path, out SaveData data))
+            return info;
+
+        info.isValid = true;
+        info.savedAtUtc = data.savedAtUtc;
+        info.sceneName = data.sceneName;
+        info.moralityBalance = data.moralityBalance;
+        info.inventoryItemCount = data.inventoryItems?.Count ?? 0;
+        return info;
+    }
+
+    private static bool TryReadSaveData(string path, out SaveData data)
+    {
+        data = null;
+        try
+        {
+            string json = File.ReadAllText(path, Utf8);
+            data = JsonUtility.FromJson<SaveData>(json);
+            return data != null && !string.IsNullOrWhiteSpace(data.sceneName);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"저장 파일을 읽지 못했습니다: {path}\n{exception.Message}");
+            return false;
+        }
+    }
+
+    private string GetManualSavePath(int slotNumber)
+    {
+        return Path.Combine(SaveDirectory, $"slot_{slotNumber}.json");
+    }
+
+    private bool IsAutoSaveExcludedScene(string sceneName)
+    {
+        if (autoSaveExcludedScenes == null) return false;
+
+        foreach (string excludedScene in autoSaveExcludedScenes)
+        {
+            if (string.Equals(sceneName, excludedScene, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsValidManualSlot(int slotNumber)
+    {
+        return slotNumber >= 1 && slotNumber <= ManualSlotCount;
     }
 
     private ItemData ResolveItem(string itemId)

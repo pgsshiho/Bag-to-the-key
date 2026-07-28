@@ -1,10 +1,29 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MainmenuManager : MonoBehaviour
 {
     public static System.Action OnAnyButtonClicked;
     // 여러 UI를 관리할 경우 Inspector에서 등록해 둘 수 있습니다 (선택 사항)
     public GameObject[] managedUIs;
+
+    private void Start()
+    {
+        foreach (Button button in FindObjectsByType<Button>(
+                     FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
+        {
+            if (button.name != "Load") continue;
+            button.onClick.AddListener(OpenLoadMenu);
+            break;
+        }
+    }
+
+    public void OpenLoadMenu()
+    {
+        OnAnyButtonClicked?.Invoke();
+        SaveLoadManager.GetOrCreate().OpenLoadMenu();
+    }
 
     // 버튼에서 호출: 대상 UI GameObject를 인자로 넘기면 토글합니다.
     public void ToggleUI(GameObject ui)
