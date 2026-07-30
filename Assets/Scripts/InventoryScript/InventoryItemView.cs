@@ -23,6 +23,7 @@ public class InventoryItemView
     private bool isInitialized;
 
     public ItemInstance Item => item;
+    public TMP_FontAsset DisplayFont => EnsureInitialized() ? unknownRecipeText.font : null;
 
     private void Awake()
     {

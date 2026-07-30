@@ -21,8 +21,17 @@ MonoBehaviour:
   m_OverrideGlobalSceneList: 1
   m_Scenes:
   - m_enabled: 1
-    m_path: Assets/Scene/MainmenuScene/Mainmenu.unity
+    m_path: Assets/Scenes/MainmenuScene/Mainmenu.unity
     m_guid: bb050c6a8f961c1438171711b6473e98
+  - m_enabled: 1
+    m_path: Assets/Scenes/FirstScene/FirstMap.unity
+    m_guid: 9cc7e23d8006e3c48864322ad33dcd71
+  - m_enabled: 1
+    m_path: Assets/Scenes/BaseScene/BaseMap.unity
+    m_guid: 1b9bd098e3f81614fb2cda17a39cad31
+  - m_enabled: 0
+    m_path: Assets/Scenes/Editor/InventoryTestScene.unity
+    m_guid: 172c73634b5d6fd4b9b828a9e3ccaef1
   m_HasScriptingDefines: 0
   m_ScriptingDefines: []
   m_PlayerSettingsYaml:

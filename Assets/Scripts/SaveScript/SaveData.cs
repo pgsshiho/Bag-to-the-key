@@ -5,7 +5,9 @@ using UnityEngine;
 [Serializable]
 public class SaveData
 {
-    public int formatVersion = 2;
+    public const int CurrentFormatVersion = 3;
+
+    public int formatVersion = CurrentFormatVersion;
     public int slotNumber;
     public bool isAutoSave;
     public string savedAtUtc;
@@ -15,6 +17,7 @@ public class SaveData
     public Vector3Data cameraRotation;
 
     public List<InventoryItemSaveData> inventoryItems = new List<InventoryItemSaveData>();
+    public InventoryItemSaveData equippedItem;
     public List<string> discoveredItemIds = new List<string>();
     public List<string> discoveredRecipeIds = new List<string>();
     public int moralityBalance;

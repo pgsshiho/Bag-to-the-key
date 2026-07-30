@@ -4,6 +4,8 @@ using UnityEngine.SceneManagement;
 
 public class PointAndClickInteractor : MonoBehaviour
 {
+    private static PointAndClickInteractor instance;
+
     [SerializeField] private Camera targetCamera;
     [SerializeField] private LayerMask interactionMask = ~0;
     [SerializeField] private float maxDistance = 1000f;
@@ -19,6 +21,14 @@ public class PointAndClickInteractor : MonoBehaviour
 
     private void Awake()
     {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        instance = this;
+        DontDestroyOnLoad(gameObject);
         ResolveCamera();
         SceneManager.sceneLoaded += HandleSceneLoaded;
     }
@@ -26,6 +36,8 @@ public class PointAndClickInteractor : MonoBehaviour
     private void OnDestroy()
     {
         SceneManager.sceneLoaded -= HandleSceneLoaded;
+        if (instance == this)
+            instance = null;
     }
 
     private void Update()
@@ -69,5 +81,11 @@ public class PointAndClickInteractor : MonoBehaviour
     private void ResolveCamera()
     {
         targetCamera = Camera.main;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        instance = null;
     }
 }

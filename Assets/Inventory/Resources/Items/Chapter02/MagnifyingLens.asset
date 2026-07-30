@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5a8ab1ffab23cc4899833ff1c092832, type: 3}
+  m_Name: MagnifyingLens
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  itemId: ch2_magnifying_lens
+  itemName: "\uB3CB\uBCF4\uAE30 \uB80C\uC988"
+  description: "\uD544\uB984 \uC870\uAC01\uACFC \uACB0\uD569\uD574 \uC544\uC9C0\uD2B8
+    \uC9C0\uB3C4\uB97C \uC644\uC131\uD558\uB294 \uB80C\uC988."
+  icon: {fileID: 21300000, guid: 6d1c03d797febe842b4999c2eedc32d9, type: 3}
+  width: 1
+  height: 1

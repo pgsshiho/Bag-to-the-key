@@ -6,17 +6,31 @@ public class MainmenuManager : MonoBehaviour
     public static System.Action OnAnyButtonClicked;
     // 여러 UI를 관리할 경우 Inspector에서 등록해 둘 수 있습니다 (선택 사항)
     public GameObject[] managedUIs;
+    [SerializeField] private string firstGameplaySceneName = "FirstMap";
+    [SerializeField] private string firstChapterTitle = "1 Chapter : 빈손";
 
     private void Start()
     {
         foreach (Button button in FindObjectsByType<Button>(
-                     FindObjectsInactive.Include,
-                     FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
-            if (button.name != "Load") continue;
-            button.onClick.AddListener(OpenLoadMenu);
-            break;
+            if (button.name == "Load")
+            {
+                button.onClick.AddListener(OpenLoadMenu);
+                continue;
+            }
+
+            if (button.name == "NewStart")
+                button.onClick.AddListener(StartNewGame);
         }
+    }
+
+    public void StartNewGame()
+    {
+        OnAnyButtonClicked?.Invoke();
+        SceneTransitionService.GetOrCreate().StartNewGame(
+            firstGameplaySceneName,
+            firstChapterTitle);
     }
 
     public void OpenLoadMenu()

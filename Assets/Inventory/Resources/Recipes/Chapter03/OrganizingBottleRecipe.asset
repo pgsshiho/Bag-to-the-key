@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1111111111111111111111111111111, type: 3}
+  m_Name: OrganizingBottleRecipe
+  m_EditorClassIdentifier: Assembly-CSharp::ItemRecipe
+  recipeId: recipe_ch3_organizing_bottle
+  recipeName: "\uC815\uB9AC\uBCD1"
+  ingredients:
+  - item: {fileID: 11400000, guid: d92fc98ba2c05fa4daaf3d835a584613, type: 2}
+    relativePosition: {x: 0, y: 0}
+    requireRotation: 0
+    rotated: 0
+  - item: {fileID: 11400000, guid: 64f35b8bc2d07494ba68e06065d4b06a, type: 2}
+    relativePosition: {x: 0, y: 1}
+    requireRotation: 0
+    rotated: 0
+  result: {fileID: 11400000, guid: 0eb3108964773aa47b81e77703fae3f8, type: 2}
+  canDisassemble: 1

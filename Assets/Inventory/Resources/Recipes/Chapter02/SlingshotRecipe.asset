@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1111111111111111111111111111111, type: 3}
+  m_Name: SlingshotRecipe
+  m_EditorClassIdentifier: Assembly-CSharp::ItemRecipe
+  recipeId: recipe_ch2_slingshot
+  recipeName: "\uC0C8\uCD1D"
+  ingredients:
+  - item: {fileID: 11400000, guid: de828c3b981930340a4b3e59cab5540b, type: 2}
+    relativePosition: {x: 0, y: 0}
+    requireRotation: 0
+    rotated: 0
+  - item: {fileID: 11400000, guid: 357bb723612b3da46a6334350bddcafa, type: 2}
+    relativePosition: {x: 1, y: 0}
+    requireRotation: 0
+    rotated: 0
+  result: {fileID: 11400000, guid: e55524eba299e5746aca25a20c4ed4a1, type: 2}
+  canDisassemble: 1

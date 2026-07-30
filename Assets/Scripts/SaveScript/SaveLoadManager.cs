@@ -150,16 +150,11 @@ public class SaveLoadManager : MonoBehaviour
 
         foreach (ItemInstance item in inventoryManager.items)
         {
-            data.inventoryItems.Add(new InventoryItemSaveData
-            {
-                itemId = item.data.itemId,
-                x = item.x,
-                y = item.y,
-                rotated = item.rotated,
-                createdByRecipeId = item.createdByRecipeId,
-                createdByRecipeRotation = item.createdByRecipeRotation
-            });
+            data.inventoryItems.Add(CreateInventoryItemSaveData(item));
         }
+
+        if (inventoryManager.EquippedItem != null)
+            data.equippedItem = CreateInventoryItemSaveData(inventoryManager.EquippedItem);
 
         DiscoveryManager discovery = DiscoveryManager.GetOrCreate();
         data.discoveredItemIds.AddRange(discovery.DiscoveredItemIds);
@@ -170,7 +165,16 @@ public class SaveLoadManager : MonoBehaviour
 
         string json = JsonUtility.ToJson(data, true);
         Directory.CreateDirectory(SaveDirectory);
-        File.WriteAllText(path, json, Utf8);
+        try
+        {
+            WriteSaveFile(path, json);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"저장 파일을 쓰지 못했습니다: {path}\n{exception.Message}");
+            return;
+        }
+
         Debug.Log($"{(isAutoSave ? "자동 저장" : $"{slotNumber}번 슬롯 저장")} 완료: {path}");
         SaveSlotsChanged?.Invoke();
     }
@@ -190,7 +194,9 @@ public class SaveLoadManager : MonoBehaviour
 
         selectedManualSlot = slotNumber;
         string path = GetManualSavePath(slotNumber);
-        if (!File.Exists(path) && slotNumber == 1 && File.Exists(LegacySavePath))
+        if (!SaveFileExists(path)
+            && slotNumber == 1
+            && SaveFileExists(LegacySavePath))
             path = LegacySavePath;
 
         LoadGameFromPath(path);
@@ -207,7 +213,9 @@ public class SaveLoadManager : MonoBehaviour
         for (int slotNumber = 1; slotNumber <= ManualSlotCount; slotNumber++)
         {
             string path = GetManualSavePath(slotNumber);
-            if (!File.Exists(path) && slotNumber == 1 && File.Exists(LegacySavePath))
+            if (!SaveFileExists(path)
+                && slotNumber == 1
+                && SaveFileExists(LegacySavePath))
                 path = LegacySavePath;
 
             slots[slotNumber - 1] = ReadSlotInfo(path, slotNumber, false);
@@ -220,13 +228,13 @@ public class SaveLoadManager : MonoBehaviour
     public bool HasManualSave(int slotNumber)
     {
         if (!IsValidManualSlot(slotNumber)) return false;
-        return File.Exists(GetManualSavePath(slotNumber))
-            || (slotNumber == 1 && File.Exists(LegacySavePath));
+        return SaveFileExists(GetManualSavePath(slotNumber))
+            || (slotNumber == 1 && SaveFileExists(LegacySavePath));
     }
 
     public bool HasAutoSave()
     {
-        return File.Exists(AutoSavePath);
+        return SaveFileExists(AutoSavePath);
     }
 
     public void SelectManualSlot(int slotNumber)
@@ -237,7 +245,7 @@ public class SaveLoadManager : MonoBehaviour
 
     private void LoadGameFromPath(string path)
     {
-        if (!File.Exists(path))
+        if (!SaveFileExists(path))
         {
             Debug.Log("저장 파일이 없습니다.");
             return;
@@ -258,8 +266,18 @@ public class SaveLoadManager : MonoBehaviour
     {
         if (SceneManager.GetActiveScene().name != data.sceneName)
         {
-            yield return SceneManager.LoadSceneAsync(data.sceneName);
+            yield return SceneTransitionService
+                .GetOrCreate()
+                .LoadSceneAndWait(data.sceneName);
             yield return null;
+
+            if (SceneManager.GetActiveScene().name != data.sceneName)
+            {
+                Debug.LogWarning(
+                    $"저장된 장면으로 이동하지 못했습니다: {data.sceneName}");
+                isLoading = false;
+                yield break;
+            }
         }
 
         inventoryManager = FindAnyObjectByType<InventoryManager>();
@@ -304,6 +322,24 @@ public class SaveLoadManager : MonoBehaviour
                 savedItem.rotated,
                 savedItem.createdByRecipeId,
                 savedItem.createdByRecipeRotation);
+        }
+
+        if (data.equippedItem != null)
+        {
+            ItemData equippedItemData = ResolveItem(data.equippedItem.itemId);
+            if (equippedItemData != null)
+            {
+                inventoryManager.AddLoadedEquippedItem(
+                    equippedItemData,
+                    data.equippedItem.rotated,
+                    data.equippedItem.createdByRecipeId,
+                    data.equippedItem.createdByRecipeRotation);
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"장착 아이템의 ItemData를 찾을 수 없습니다: {data.equippedItem.itemId}");
+            }
         }
 
         DiscoveryManager.GetOrCreate().Restore(
@@ -371,7 +407,7 @@ public class SaveLoadManager : MonoBehaviour
         {
             slotNumber = slotNumber,
             isAutoSave = isAutoSave,
-            exists = File.Exists(path)
+            exists = SaveFileExists(path)
         };
 
         if (!info.exists || !TryReadSaveData(path, out SaveData data))
@@ -381,24 +417,128 @@ public class SaveLoadManager : MonoBehaviour
         info.savedAtUtc = data.savedAtUtc;
         info.sceneName = data.sceneName;
         info.moralityBalance = data.moralityBalance;
-        info.inventoryItemCount = data.inventoryItems?.Count ?? 0;
+        info.inventoryItemCount = (data.inventoryItems?.Count ?? 0)
+            + (data.equippedItem != null ? 1 : 0);
         return info;
+    }
+
+    private static InventoryItemSaveData CreateInventoryItemSaveData(ItemInstance item)
+    {
+        return new InventoryItemSaveData
+        {
+            itemId = item.data.itemId,
+            x = item.x,
+            y = item.y,
+            rotated = item.rotated,
+            createdByRecipeId = item.createdByRecipeId,
+            createdByRecipeRotation = item.createdByRecipeRotation
+        };
     }
 
     private static bool TryReadSaveData(string path, out SaveData data)
     {
+        if (TryReadSaveDataFile(path, out data))
+            return true;
+
+        string backupPath = GetBackupPath(path);
+        if (!File.Exists(backupPath)
+            || !TryReadSaveDataFile(backupPath, out data))
+        {
+            return false;
+        }
+
+        Debug.LogWarning($"기본 저장 파일 대신 백업을 복구했습니다: {backupPath}");
+        return true;
+    }
+
+    private static bool TryReadSaveDataFile(string path, out SaveData data)
+    {
         data = null;
+        if (!File.Exists(path)) return false;
+
         try
         {
             string json = File.ReadAllText(path, Utf8);
             data = JsonUtility.FromJson<SaveData>(json);
-            return data != null && !string.IsNullOrWhiteSpace(data.sceneName);
+            if (data == null || string.IsNullOrWhiteSpace(data.sceneName))
+                return false;
+
+            if (data.formatVersion > SaveData.CurrentFormatVersion)
+            {
+                Debug.LogWarning(
+                    $"현재 게임보다 새로운 저장 형식입니다: "
+                    + $"{data.formatVersion}");
+                data = null;
+                return false;
+            }
+
+            return true;
         }
         catch (Exception exception)
         {
             Debug.LogWarning($"저장 파일을 읽지 못했습니다: {path}\n{exception.Message}");
             return false;
         }
+    }
+
+    private static void WriteSaveFile(string path, string json)
+    {
+        string temporaryPath = path + ".tmp";
+        string backupPath = GetBackupPath(path);
+
+        try
+        {
+            File.WriteAllText(temporaryPath, json, Utf8);
+            if (!File.Exists(path))
+            {
+                File.Move(temporaryPath, path);
+                return;
+            }
+
+            try
+            {
+                File.Replace(temporaryPath, path, backupPath, true);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                ReplaceSaveFileWithFallback(
+                    temporaryPath,
+                    path,
+                    backupPath);
+            }
+            catch (IOException)
+            {
+                ReplaceSaveFileWithFallback(
+                    temporaryPath,
+                    path,
+                    backupPath);
+            }
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+    }
+
+    private static void ReplaceSaveFileWithFallback(
+        string temporaryPath,
+        string path,
+        string backupPath)
+    {
+        File.Copy(path, backupPath, true);
+        File.Copy(temporaryPath, path, true);
+        File.Delete(temporaryPath);
+    }
+
+    private static bool SaveFileExists(string path)
+    {
+        return File.Exists(path) || File.Exists(GetBackupPath(path));
+    }
+
+    private static string GetBackupPath(string path)
+    {
+        return path + ".bak";
     }
 
     private string GetManualSavePath(int slotNumber)

@@ -1,18 +1,39 @@
+using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Itemgetbase : MonoBehaviour, IWorldInteractable
 {
     public ItemData item;
     [SerializeField] private InventoryManager inventoryManager;
+    [SerializeField] private string persistentPickupId;
 
     private bool isPickingUp;
+    private string resolvedPickupId;
 
     private void Awake()
     {
         if (GetComponent<Collider>() == null && GetComponent<Collider2D>() == null)
             gameObject.AddComponent<BoxCollider>();
 
+        resolvedPickupId = ResolvePersistentPickupId();
         ResolveInventory();
+    }
+
+    private void OnEnable()
+    {
+        GameProgressState.ProgressChanged += RefreshCollectedState;
+        RefreshCollectedState();
+    }
+
+    private void Start()
+    {
+        RefreshCollectedState();
+    }
+
+    private void OnDisable()
+    {
+        GameProgressState.ProgressChanged -= RefreshCollectedState;
     }
 
     public void Interact()
@@ -39,6 +60,7 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
         }
 
         DiscoveryManager.GetOrCreate().DiscoverItem(item);
+        GameProgressState.CompletePuzzle(resolvedPickupId);
         gameObject.SetActive(false);
         Destroy(gameObject);
         return true;
@@ -53,5 +75,31 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
     {
         if (inventoryManager == null)
             inventoryManager = FindAnyObjectByType<InventoryManager>();
+    }
+
+    private void RefreshCollectedState()
+    {
+        if (string.IsNullOrWhiteSpace(resolvedPickupId))
+            resolvedPickupId = ResolvePersistentPickupId();
+
+        if (GameProgressState.IsPuzzleCompleted(resolvedPickupId))
+            gameObject.SetActive(false);
+    }
+
+    private string ResolvePersistentPickupId()
+    {
+        if (!string.IsNullOrWhiteSpace(persistentPickupId))
+            return persistentPickupId;
+
+        StringBuilder path = new StringBuilder(name);
+        Transform current = transform.parent;
+        while (current != null)
+        {
+            path.Insert(0, '/');
+            path.Insert(0, current.name);
+            current = current.parent;
+        }
+
+        return $"pickup:{SceneManager.GetActiveScene().name}:{path}";
     }
 }
