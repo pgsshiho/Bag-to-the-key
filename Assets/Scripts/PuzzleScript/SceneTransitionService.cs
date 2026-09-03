@@ -19,6 +19,11 @@ public class SceneTransitionService : MonoBehaviour
     public static SceneTransitionService Instance => instance;
     public bool IsTransitioning => isTransitioning;
 
+    public void SetFont(TMP_FontAsset font)
+    {
+        if (font != null && chapterTitleText != null) chapterTitleText.font = font;
+    }
+
     public static SceneTransitionService GetOrCreate()
     {
         if (instance != null) return instance;

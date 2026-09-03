@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -35,8 +36,11 @@ public class InventoryLayoutPuzzle : MonoBehaviour
         EvaluateNow();
     }
 
-    private void Start()
+    private IEnumerator Start()
     {
+        // Duplicate scene inventory roots are destroyed at the end of the first frame.
+        // Bind after that so returning to a room observes the persistent inventory.
+        yield return null;
         BindInventory();
         EvaluateNow();
     }

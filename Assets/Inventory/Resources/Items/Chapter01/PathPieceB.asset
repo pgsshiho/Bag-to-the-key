@@ -16,6 +16,7 @@ MonoBehaviour:
   itemName: "\uAE38 \uC870\uAC01 B"
   description: "\uC778\uD615 \uD14C\uC774\uBE14 \uD37C\uC990\uB85C \uC5BB\uB294 \uACF5
     \uAD74\uB9AC\uAE30 \uAE38\uC758 \uB450 \uBC88\uC9F8 \uBD80\uD488."
-  icon: {fileID: -4876375077618658203, guid: 1884dcaecef60f34c919e30b2733f7b7, type: 3}
+  icon: {fileID: -7660176557207693442, guid: d1c120ccd4c76a147a6db4b25673c437, type: 3}
+  canDiscard: 0
   width: 1
   height: 1

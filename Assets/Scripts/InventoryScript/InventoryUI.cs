@@ -883,6 +883,7 @@ public class InventoryUI : MonoBehaviour
         EnsureDiscardOverlay();
         ClearDiscardOverlay();
         if (selectedItem == null
+            || selectedItem.data == null || !selectedItem.data.canDiscard
             || activeDragItem != null
             || !inventoryManager.items.Contains(selectedItem))
             return;

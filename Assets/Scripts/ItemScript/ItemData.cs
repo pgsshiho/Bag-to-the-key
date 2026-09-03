@@ -7,6 +7,7 @@ public class ItemData : ScriptableObject
     public string itemName;
     [TextArea] public string description;
     public Sprite icon;
+    public bool canDiscard = true;
 
     public int width = 1;
     public int height = 1;

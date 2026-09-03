@@ -7,6 +7,7 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
     public ItemData item;
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private string persistentPickupId;
+    [SerializeField] private bool keepForStateRestore;
 
     private bool isPickingUp;
     private string resolvedPickupId;
@@ -22,6 +23,7 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
 
     private void OnEnable()
     {
+        isPickingUp = false;
         GameProgressState.ProgressChanged += RefreshCollectedState;
         RefreshCollectedState();
     }
@@ -62,7 +64,7 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
         DiscoveryManager.GetOrCreate().DiscoverItem(item);
         GameProgressState.CompletePuzzle(resolvedPickupId);
         gameObject.SetActive(false);
-        Destroy(gameObject);
+        if (!keepForStateRestore) Destroy(gameObject);
         return true;
     }
 

@@ -17,5 +17,6 @@ MonoBehaviour:
   description: "\uCC45\uC7A5 \uC815\uB9AC \uD37C\uC990\uC5D0 \uC0AC\uC6A9\uD558\uB294
     \uCD08\uB85D \uCC45."
   icon: {fileID: 21300000, guid: 33ad43acdf1d708489011cf58e647e4e, type: 3}
+  canDiscard: 0
   width: 1
   height: 1

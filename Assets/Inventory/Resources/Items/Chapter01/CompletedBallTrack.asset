@@ -16,6 +16,7 @@ MonoBehaviour:
   itemName: "\uC644\uC131\uB41C \uACF5 \uAD6C\uB974\uAE30 \uAE38"
   description: "\uC138 \uAE38 \uC870\uAC01\uC744 \uC5F0\uACB0\uD574 \uC644\uC131\uD55C
     \uCD9C\uAD6C \uC7A5\uCE58\uC6A9 \uAE38."
-  icon: {fileID: -4876375077618658203, guid: 1884dcaecef60f34c919e30b2733f7b7, type: 3}
+  icon: {fileID: -3760119946812716299, guid: cc3a7942e35331e4db0f9ccd55a69cdc, type: 3}
+  canDiscard: 0
   width: 3
   height: 1

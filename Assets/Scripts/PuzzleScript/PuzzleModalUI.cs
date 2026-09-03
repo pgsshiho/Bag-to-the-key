@@ -48,6 +48,13 @@ public class PuzzleModalUI : MonoBehaviour
         return root.AddComponent<PuzzleModalUI>();
     }
 
+    public void SetFont(TMP_FontAsset font)
+    {
+        if (font == null) return;
+        foreach (TMP_Text text in GetComponentsInChildren<TMP_Text>(true))
+            text.font = font;
+    }
+
     private void Awake()
     {
         if (instance != null && instance != this)

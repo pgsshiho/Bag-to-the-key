@@ -311,6 +311,7 @@ public class InventoryManager : MonoBehaviour
 
     public bool DiscardItem(ItemInstance item)
     {
+        if (item?.data == null || !item.data.canDiscard) return false;
         return RemoveItem(item);
     }
 
