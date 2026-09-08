@@ -6,7 +6,7 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
 {
     public ItemData item;
     [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private string persistentPickupId;
+    [SerializeField] private OnlyOneUnityString persistentPickupId;
     [SerializeField] private bool keepForStateRestore;
 
     private bool isPickingUp;
@@ -90,8 +90,8 @@ public class Itemgetbase : MonoBehaviour, IWorldInteractable
 
     private string ResolvePersistentPickupId()
     {
-        if (!string.IsNullOrWhiteSpace(persistentPickupId))
-            return persistentPickupId;
+        if (persistentPickupId != null)
+            return persistentPickupId.Value;
 
         StringBuilder path = new StringBuilder(name);
         Transform current = transform.parent;

@@ -6,7 +6,7 @@ using UnityEngine.Events;
 [Serializable]
 public class ItemUsePuzzleStep
 {
-    public string stepId;
+    public OnlyOneUnityString progressId;
     public ItemData requiredEquippedItem;
     public bool consumeOnUse = true;
     public List<ItemData> rewardItems = new List<ItemData>();
@@ -19,10 +19,14 @@ public class ItemUsePuzzleStep
 [RequireComponent(typeof(PuzzleStateController))]
 public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
 {
-    [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private List<ItemUsePuzzleStep> steps =
-        new List<ItemUsePuzzleStep>();
-    [SerializeField] private UnityEvent onAlreadyCompleted;
+    [SerializeField]
+    private InventoryManager inventoryManager;
+
+    [SerializeField]
+    private List<ItemUsePuzzleStep> steps = new List<ItemUsePuzzleStep>();
+
+    [SerializeField]
+    private UnityEvent onAlreadyCompleted;
 
     private readonly HashSet<int> appliedStepStates = new HashSet<int>();
     private PuzzleStateController completion;
@@ -65,6 +69,12 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
         }
 
         ItemUsePuzzleStep step = steps[stepIndex];
+        if (step.progressId == null)
+        {
+            Debug.LogError($"{name}: Step {stepIndex} Progress ID가 지정되지 않았습니다.", this);
+            return;
+        }
+
         ResolveInventory();
         if (inventoryManager == null)
         {
@@ -72,25 +82,32 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
             return;
         }
 
-        if (step.requiredEquippedItem != null
-            && !inventoryManager.IsEquipped(step.requiredEquippedItem))
+        if (
+            step.requiredEquippedItem != null
+            && !inventoryManager.IsEquipped(step.requiredEquippedItem)
+        )
         {
             step.onMissingItem?.Invoke();
             return;
         }
 
-        if (!inventoryManager.TryAddItems(
+        if (
+            !inventoryManager.TryAddItems(
                 step.rewardItems,
                 out List<ItemInstance> addedItems,
-                false))
+                false
+            )
+        )
         {
             step.onInventoryFull?.Invoke();
             return;
         }
 
-        if (step.consumeOnUse
+        if (
+            step.consumeOnUse
             && step.requiredEquippedItem != null
-            && !inventoryManager.ConsumeEquippedItem(step.requiredEquippedItem))
+            && !inventoryManager.ConsumeEquippedItem(step.requiredEquippedItem)
+        )
         {
             RollbackRewards(addedItems);
             step.onMissingItem?.Invoke();
@@ -104,7 +121,7 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
         foreach (ItemInstance item in addedItems)
             discovery.DiscoverItem(item.data);
 
-        GameProgressState.CompletePuzzle(GetStepStateId(step, stepIndex));
+        GameProgressState.CompletePuzzle(GetStepStateId(step));
         step.onFirstCompleted?.Invoke();
         RefreshStepStates();
 
@@ -114,11 +131,12 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
 
     private int GetCurrentStepIndex()
     {
-        if (steps.Count == 0) return -1;
+        if (steps.Count == 0)
+            return -1;
 
         for (int i = 0; i < steps.Count; i++)
         {
-            if (!GameProgressState.IsPuzzleCompleted(GetStepStateId(steps[i], i)))
+            if (!GameProgressState.IsPuzzleCompleted(GetStepStateId(steps[i])))
                 return i;
         }
 
@@ -132,8 +150,9 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
 
         for (int i = 0; i < steps.Count; i++)
         {
-            bool completed = completion.IsCompleted
-                || GameProgressState.IsPuzzleCompleted(GetStepStateId(steps[i], i));
+            bool completed =
+                completion.IsCompleted
+                || GameProgressState.IsPuzzleCompleted(GetStepStateId(steps[i]));
             if (!completed)
             {
                 appliedStepStates.Remove(i);
@@ -145,12 +164,9 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
         }
     }
 
-    private string GetStepStateId(ItemUsePuzzleStep step, int index)
+    private string GetStepStateId(ItemUsePuzzleStep step)
     {
-        string stepId = !string.IsNullOrWhiteSpace(step?.stepId)
-            ? step.stepId
-            : index.ToString();
-        return $"{completion.PuzzleId}.step.{stepId}";
+        return step != null ? step.progressId : string.Empty;
     }
 
     private void RollbackRewards(IEnumerable<ItemInstance> addedItems)

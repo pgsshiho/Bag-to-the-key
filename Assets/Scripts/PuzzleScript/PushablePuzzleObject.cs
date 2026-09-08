@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -13,6 +14,8 @@ public class PushablePuzzleObject : MonoBehaviour, IWorldInteractable
     [SerializeField] private ItemData requiredEquippedItem;
     [SerializeField] private bool consumeRequiredItemOnCompletion;
     [SerializeField] private InventoryManager inventoryManager;
+    [SerializeField] private List<OnlyOneUnityString> pushStateIds =
+        new List<OnlyOneUnityString>();
     [SerializeField] private UnityEvent onPushStarted;
     [SerializeField] private UnityEvent onPushCompleted;
     [SerializeField] private UnityEvent onPushBlocked;
@@ -67,6 +70,14 @@ public class PushablePuzzleObject : MonoBehaviour, IWorldInteractable
         if (completedPushes >= requiredPushCount)
         {
             CompletePuzzle();
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(GetPushStateId(completedPushes + 1)))
+        {
+            Debug.LogError(
+                $"{name}: Push {completedPushes + 1} Progress ID가 지정되지 않았습니다.",
+                this);
             return;
         }
 
@@ -154,7 +165,10 @@ public class PushablePuzzleObject : MonoBehaviour, IWorldInteractable
 
     private string GetPushStateId(int pushNumber)
     {
-        return $"{completion.PuzzleId}.push.{pushNumber}";
+        int index = pushNumber - 1;
+        return index >= 0 && index < pushStateIds.Count
+            ? pushStateIds[index]
+            : string.Empty;
     }
 
     private void ResolveInventory()

@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class ExclusivePuzzleChoice : MonoBehaviour
 {
-    [SerializeField] private string choicePuzzleId;
+    [SerializeField] private OnlyOneUnityString choicePuzzleId;
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private List<ExclusivePuzzleChoiceOption> options =
         new List<ExclusivePuzzleChoiceOption>();
@@ -37,6 +37,12 @@ public class ExclusivePuzzleChoice : MonoBehaviour
         if (option == null || !options.Contains(option))
             return false;
 
+        if (choicePuzzleId == null || option.OutcomeId == null)
+        {
+            Debug.LogError($"{name}: Choice Puzzle ID와 Outcome ID를 지정해야 합니다.", this);
+            return false;
+        }
+
         ExclusivePuzzleChoiceOption selected = GetSelectedOption();
         if (selected != null)
         {
@@ -50,7 +56,7 @@ public class ExclusivePuzzleChoice : MonoBehaviour
             return false;
         }
 
-        string outcomeId = option.ResolveOutcomeId(choicePuzzleId);
+        OnlyOneUnityString outcomeId = option.OutcomeId;
         if (GameProgressState.IsPuzzleCompleted(choicePuzzleId)
             || GameProgressState.HasOutcome(outcomeId))
         {
@@ -114,7 +120,7 @@ public class ExclusivePuzzleChoice : MonoBehaviour
         foreach (ExclusivePuzzleChoiceOption option in options)
         {
             if (option != null
-                && GameProgressState.HasOutcome(option.ResolveOutcomeId(choicePuzzleId)))
+                && GameProgressState.HasOutcome(option.OutcomeId))
             {
                 return option;
             }

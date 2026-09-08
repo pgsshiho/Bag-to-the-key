@@ -7,7 +7,7 @@ public class EquippedItemUseTarget : MonoBehaviour, IWorldInteractable
     [SerializeField] private ItemData requiredItem;
     [SerializeField] private bool consumeOnUse;
     [SerializeField] private bool allowRepeatedUse;
-    [SerializeField] private string puzzleId;
+    [SerializeField] private OnlyOneUnityString puzzleId;
     [SerializeField] private UnityEvent onUsed;
     [SerializeField] private UnityEvent onUsedStateApplied;
     [SerializeField] private UnityEvent onMissingRequiredItem;
@@ -65,7 +65,7 @@ public class EquippedItemUseTarget : MonoBehaviour, IWorldInteractable
         if (consumeOnUse)
             inventoryManager.ConsumeEquippedItem(requiredItem);
 
-        if (!string.IsNullOrWhiteSpace(puzzleId))
+        if (puzzleId != null)
             GameProgressState.CompletePuzzle(puzzleId);
         RefreshUsedState();
     }

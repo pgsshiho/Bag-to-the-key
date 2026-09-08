@@ -5,11 +5,11 @@ using UnityEngine.Events;
 
 public class ChapterFlowController : MonoBehaviour, IWorldInteractable
 {
-    [SerializeField] private string chapterCompletionId;
+    [SerializeField] private OnlyOneUnityString chapterCompletionId;
     [SerializeField, TextArea] private string objectiveText;
     [SerializeField] private TMP_Text objectiveLabel;
-    [SerializeField] private List<string> requiredPuzzleIds =
-        new List<string>();
+    [SerializeField] private List<OnlyOneUnityString> requiredPuzzleIds =
+        new List<OnlyOneUnityString>();
     [SerializeField] private string nextSceneName;
     [SerializeField] private string nextChapterTitle;
     [SerializeField] private bool saveBeforeTransition = true;
@@ -26,7 +26,7 @@ public class ChapterFlowController : MonoBehaviour, IWorldInteractable
             if (requiredPuzzleIds.Count == 0)
                 return false;
 
-            foreach (string puzzleId in requiredPuzzleIds)
+            foreach (OnlyOneUnityString puzzleId in requiredPuzzleIds)
             {
                 if (!GameProgressState.IsPuzzleCompleted(puzzleId))
                     return false;
@@ -60,7 +60,7 @@ public class ChapterFlowController : MonoBehaviour, IWorldInteractable
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(chapterCompletionId))
+        if (chapterCompletionId != null)
             GameProgressState.CompletePuzzle(chapterCompletionId);
         onChapterCompleted?.Invoke();
 

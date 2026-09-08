@@ -6,8 +6,8 @@ public class SceneTransitionInteractable : MonoBehaviour, IWorldInteractable
 {
     [SerializeField] private string targetSceneName;
     [SerializeField] private string chapterTitle;
-    [SerializeField] private List<string> requiredPuzzleIds =
-        new List<string>();
+    [SerializeField] private List<OnlyOneUnityString> requiredPuzzleIds =
+        new List<OnlyOneUnityString>();
     [SerializeField] private bool saveBeforeTransition = true;
     [SerializeField] private UnityEvent onTransitionStarted;
     [SerializeField] private UnityEvent onTransitionBlocked;
@@ -16,7 +16,7 @@ public class SceneTransitionInteractable : MonoBehaviour, IWorldInteractable
     {
         get
         {
-            foreach (string puzzleId in requiredPuzzleIds)
+            foreach (OnlyOneUnityString puzzleId in requiredPuzzleIds)
             {
                 if (!GameProgressState.IsPuzzleCompleted(puzzleId))
                     return false;

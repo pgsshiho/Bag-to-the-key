@@ -11,8 +11,8 @@ public class InventoryWeightSensor : MonoBehaviour, IWorldInteractable
     [SerializeField] private int maximumOccupiedCells = -1;
     [SerializeField] private List<ItemData> itemsThatMustBeAbsent =
         new List<ItemData>();
-    [SerializeField] private List<string> requiredPuzzleIds =
-        new List<string>();
+    [SerializeField] private List<OnlyOneUnityString> requiredPuzzleIds =
+        new List<OnlyOneUnityString>();
     [SerializeField] private bool evaluateAutomatically;
     [SerializeField] private UnityEvent onRequirementsMet;
     [SerializeField] private UnityEvent onRequirementsNotMet;
@@ -79,7 +79,7 @@ public class InventoryWeightSensor : MonoBehaviour, IWorldInteractable
                 return false;
         }
 
-        foreach (string puzzleId in requiredPuzzleIds)
+        foreach (OnlyOneUnityString puzzleId in requiredPuzzleIds)
         {
             if (!GameProgressState.IsPuzzleCompleted(puzzleId))
                 return false;

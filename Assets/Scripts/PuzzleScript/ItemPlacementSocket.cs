@@ -4,7 +4,7 @@ using UnityEngine.Events;
 public class ItemPlacementSocket : MonoBehaviour, IWorldInteractable
 {
     [SerializeField] private ItemPlacementPuzzle puzzle;
-    [SerializeField] private string socketId;
+    [SerializeField] private OnlyOneUnityString progressId;
     [SerializeField] private ItemData requiredItem;
     [SerializeField, Min(0)] private int sequenceIndex;
     [SerializeField] private bool consumeOnPlace = true;
@@ -16,10 +16,11 @@ public class ItemPlacementSocket : MonoBehaviour, IWorldInteractable
 
     private bool filledStateApplied;
 
-    public string SocketId => socketId;
+    public OnlyOneUnityString ProgressId => progressId;
     public ItemData RequiredItem => requiredItem;
     public int SequenceIndex => sequenceIndex;
     public bool ConsumeOnPlace => consumeOnPlace;
+    public GameObject PlacedVisual => placedVisual;
 
     private void Awake()
     {
@@ -34,10 +35,10 @@ public class ItemPlacementSocket : MonoBehaviour, IWorldInteractable
         puzzle?.TryPlace(this);
     }
 
-    public void SetFilledState(bool filled)
+    public void SetFilledState(bool filled, bool showPlacedVisual = true)
     {
         if (placedVisual != null)
-            placedVisual.SetActive(filled);
+            placedVisual.SetActive(filled && showPlacedVisual);
 
         if (!filled)
         {

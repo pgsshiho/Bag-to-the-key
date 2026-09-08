@@ -12,8 +12,8 @@ public class SceneTransitionService : MonoBehaviour
     [SerializeField, Min(0f)] private float fadeDuration = 0.45f;
     [SerializeField, Min(0f)] private float titleHoldDuration = 0.75f;
 
-    private CanvasGroup canvasGroup;
-    private TMP_Text chapterTitleText;
+    [SerializeField] private CanvasGroup canvasGroup;
+    [SerializeField] private TMP_Text chapterTitleText;
     private bool isTransitioning;
 
     public static SceneTransitionService Instance => instance;
@@ -32,14 +32,10 @@ public class SceneTransitionService : MonoBehaviour
             FindAnyObjectByType<SceneTransitionService>();
         if (existing != null) return existing;
 
-        GameObject root = new GameObject(
-            nameof(SceneTransitionService),
-            typeof(RectTransform),
-            typeof(Canvas),
-            typeof(CanvasScaler),
-            typeof(GraphicRaycaster),
-            typeof(CanvasGroup));
-        return root.AddComponent<SceneTransitionService>();
+        SceneTransitionService prefab = Resources.Load<SceneTransitionService>("UI/SceneTransitionService");
+        if (prefab == null)
+            throw new InvalidOperationException("Missing authored UI prefab: Resources/UI/SceneTransitionService");
+        return Instantiate(prefab);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -64,7 +60,9 @@ public class SceneTransitionService : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
-        BuildOverlay();
+        canvasGroup.alpha = 0f;
+        canvasGroup.blocksRaycasts = false;
+        canvasGroup.interactable = false;
     }
 
     private void OnDestroy()
@@ -181,64 +179,4 @@ public class SceneTransitionService : MonoBehaviour
         WorldInteractionGate.Unblock(this);
     }
 
-    private void BuildOverlay()
-    {
-        Canvas canvas = GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 6000;
-
-        CanvasScaler scaler = GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        canvasGroup = GetComponent<CanvasGroup>();
-        canvasGroup.alpha = 0f;
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
-
-        GameObject background = CreateUiObject(
-            "FadeBackground",
-            transform,
-            typeof(Image));
-        RectTransform backgroundRect = background.GetComponent<RectTransform>();
-        Stretch(backgroundRect);
-        background.GetComponent<Image>().color = Color.black;
-
-        GameObject titleObject = CreateUiObject(
-            "ChapterTitle",
-            background.transform,
-            typeof(TextMeshProUGUI));
-        chapterTitleText = titleObject.GetComponent<TMP_Text>();
-        chapterTitleText.fontSize = 42f;
-        chapterTitleText.alignment = TextAlignmentOptions.Center;
-        chapterTitleText.color = Color.white;
-        chapterTitleText.textWrappingMode = TextWrappingModes.Normal;
-
-        RectTransform titleRect = chapterTitleText.rectTransform;
-        titleRect.anchorMin = new Vector2(0.15f, 0.4f);
-        titleRect.anchorMax = new Vector2(0.85f, 0.6f);
-        titleRect.offsetMin = Vector2.zero;
-        titleRect.offsetMax = Vector2.zero;
-    }
-
-    private static GameObject CreateUiObject(
-        string name,
-        Transform parent,
-        params Type[] components)
-    {
-        GameObject gameObject = new GameObject(name, typeof(RectTransform));
-        foreach (Type component in components)
-            gameObject.AddComponent(component);
-        gameObject.transform.SetParent(parent, false);
-        return gameObject;
-    }
-
-    private static void Stretch(RectTransform rect)
-    {
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-    }
 }
