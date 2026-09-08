@@ -4,8 +4,8 @@ using UnityEngine.Events;
 public class PuzzleOutcomeRecorder : MonoBehaviour
 {
     [Header("Progress IDs")]
-    [SerializeField] private string puzzleId;
-    [SerializeField] private string outcomeId;
+    [SerializeField] private OnlyOneUnityString puzzleId;
+    [SerializeField] private OnlyOneUnityString outcomeId;
 
     [Header("Morality")]
     [Tooltip("Positive values are virtue. Negative values are sin.")]
@@ -39,8 +39,7 @@ public class PuzzleOutcomeRecorder : MonoBehaviour
 
     public bool Resolve()
     {
-        if (string.IsNullOrWhiteSpace(puzzleId)
-            || string.IsNullOrWhiteSpace(outcomeId))
+        if (puzzleId == null || outcomeId == null)
         {
             Debug.LogWarning(
                 $"{name}: Puzzle ID and Outcome ID must be assigned.",
