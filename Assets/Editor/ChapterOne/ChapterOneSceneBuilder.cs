@@ -21,6 +21,8 @@ public static class ChapterOneSceneBuilder
     private const string Art = "Assets/Sprites/RoomSprite/FirstRoom/";
     private const string Items = "Assets/Inventory/Resources/Items/Chapter01/";
     private const string PlaceholderPath = "Assets/Sprites/ChapterOnePlaceholders/";
+    private const string SpriteTextureMixMaterialPath =
+        "Assets/Materials/SpriteTextureMix.mat";
     private static TMP_FontAsset font;
     private static Material spriteMaterial;
     private static Sprite square;
@@ -63,6 +65,13 @@ public static class ChapterOneSceneBuilder
 
         GameObject root = new GameObject("Chapter01");
         presentation = root.AddComponent<ChapterOnePresentation>();
+        Set(presentation, "introductionId", ChapterOneProgressIds.Introduction);
+        Set(presentation, "parentGiftId", ChapterOneProgressIds.ParentGift);
+        Set(presentation, "ballFinishedId", ChapterOneProgressIds.BallFinished);
+        Set(presentation, "tableCompletedId", ChapterOneProgressIds.Table);
+        Set(presentation, "booksCompletedId", ChapterOneProgressIds.Books);
+        Set(presentation, "chestCompletedId", ChapterOneProgressIds.Chest);
+        Set(presentation, "boxCompletedId", ChapterOneProgressIds.Box);
         ChapterOneStateView stateView = root.AddComponent<ChapterOneStateView>();
         Transform[] walls = new Transform[4];
         string[] wallNames = { "01_Entry", "02_BoxAndHole", "03_DollTableAndBooks", "04_BallTrack" };
@@ -70,9 +79,13 @@ public static class ChapterOneSceneBuilder
         {
             walls[i] = Node(wallNames[i], root.transform, Vector3.zero).transform;
             walls[i].localRotation = Quaternion.Euler(0f, i * 90f, 0f);
-            Visual("Wallpaper", walls[i], LoadSprite("벽지 1"), 0, 0, 16, 36, 21);
-            Visual("Floor", walls[i], square, 0, -7.4f, 15.8f, 36, 4).GetComponent<SpriteRenderer>().color = new Color(.40f,.29f,.24f);
-            Visual("Skirting", walls[i], square, 0, -5.2f, 15.7f, 36, .18f).GetComponent<SpriteRenderer>().color = new Color(.90f,.79f,.66f);
+            Visual("Wallpaper", walls[i], LoadSprite("벽지 1"), 0, 0, 16, 32, 21);
+            SpriteRenderer floor = Visual("Floor", walls[i], square, 0, -7.4f, 16, 32, 4).GetComponent<SpriteRenderer>();
+            floor.color = new Color(.40f,.29f,.24f);
+            floor.sortingOrder = 20;
+            SpriteRenderer skirting = Visual("Skirting", walls[i], square, 0, -5.2f, 16, 32, .18f).GetComponent<SpriteRenderer>();
+            skirting.color = new Color(.90f,.79f,.66f);
+            skirting.sortingOrder = 30;
         }
         SetupCamera();
         SetupInventoryUi();
@@ -243,22 +256,36 @@ public static class ChapterOneSceneBuilder
         Label("DoorLabel", wall, "집 밖으로", -5,2.8f,14.5f,1.1f);
         Visual("DoorKnob", wall, Item("PinkBall").icon, -3.7f,-1.5f,14.5f,.3f,.3f);
         ChapterFlowController exit = door.AddComponent<ChapterFlowController>();
-        Set(exit, "chapterCompletionId", "ch01.complete");
-        Set(exit, "requiredPuzzleIds", new List<string> { "ch01.box", "ch01.chest", "ch01.table", "ch01.books", "ch01.ball_finished", "ch01.parent_gift", "ch01.pickup.PinkBall" });
+        Set(exit, "chapterCompletionId", ChapterOneProgressIds.Complete);
+        Set(exit, "requiredPuzzleIds", new List<OnlyOneUnityString>
+        {
+            ChapterOneProgressIds.Box,
+            ChapterOneProgressIds.Chest,
+            ChapterOneProgressIds.Table,
+            ChapterOneProgressIds.Books,
+            ChapterOneProgressIds.BallFinished,
+            ChapterOneProgressIds.ParentGift,
+            ChapterOneProgressIds.Pickup("PinkBall")
+        });
         Set(exit, "nextSceneName", "BaseMap");
         Set(exit, "nextChapterTitle", "2 Chapter : 채워지는 가방\n청소년기");
         Event(exit, "onExitBlocked", presentation.ParentHint);
         Set(presentation, "exit", exit);
         GameObject glow = Visual("OpenDoorLight", wall, square, -5,-1.3f,14.6f,3.5f,7f);
         glow.GetComponent<SpriteRenderer>().color = new Color(1f,.89f,.63f,.65f);
-        Bind(glow, new[] { "ch01.parent_gift" });
+        Bind(glow, new[] { ChapterOneProgressIds.ParentGift });
 
         GameObject parent = Visual("Parent_Placeholder", wall, square, 4,-1.3f,14.5f,3.4f,5.5f,true);
         parent.GetComponent<SpriteRenderer>().color = new Color(.66f,.47f,.57f);
         Label("ParentLabel", wall, "부모\n꼬맹이, 이리 오렴", 4,2.5f,14.2f,1f);
         MultiStepItemUsePuzzle gift = parent.AddComponent<MultiStepItemUsePuzzle>();
-        Set(gift.GetComponent<PuzzleStateController>(), "puzzleId", "ch01.parent_gift");
-        var step = new ItemUsePuzzleStep { stepId = "cat", requiredEquippedItem = Item("CatDoll"), consumeOnUse = true };
+        Set(gift.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.ParentGift);
+        var step = new ItemUsePuzzleStep
+        {
+            progressId = ChapterOneProgressIds.ParentGiftStep,
+            requiredEquippedItem = Item("CatDoll"),
+            consumeOnUse = true
+        };
         step.onMissingItem = new UnityEvent();
         UnityEventTools.AddPersistentListener(step.onMissingItem, presentation.ParentHint);
         step.onFirstCompleted = new UnityEvent();
@@ -275,22 +302,24 @@ public static class ChapterOneSceneBuilder
         Pickup("GreenBook", wall, -8.5f,0,14.4f,1.1f,1.7f);
         GameObject box = Visual("PushBox", wall, LoadSprite("박스"), 4,-2.3f,13.5f,7,5.5f,true);
         PushablePuzzleObject push = box.AddComponent<PushablePuzzleObject>();
-        Set(push.GetComponent<PuzzleStateController>(), "puzzleId", "ch01.box");
+        Set(push.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.Box);
+        Set(push, "pushStateIds", new List<OnlyOneUnityString> { ChapterOneProgressIds.BoxPushOne });
         Set(push, "localPushOffset", new Vector3(6,0,0));
         EventText(push, "onPushCompleted", "상자 뒤에 작은 상자와 토끼가 숨어 있었네. 토끼를 가방에 담아 보렴.");
-        Bind(Label("PushLabel", wall, "밀어 보기", 4,1,13.3f,1f).gameObject,Array.Empty<string>(),new[] { "ch01.box" });
+        Bind(Label("PushLabel", wall, "밀어 보기", 4,1,13.3f,1f).gameObject,
+            Array.Empty<OnlyOneUnityString>(), new[] { ChapterOneProgressIds.Box });
         GameObject chest = Visual("LockedChest", wall, LoadSprite("박스"), 2,-3.1f,14.4f,3,2.4f,true);
         chest.GetComponent<SpriteRenderer>().color = new Color(.75f,.81f,.91f);
         NumericCodeLock code = chest.AddComponent<NumericCodeLock>();
-        Set(code.GetComponent<PuzzleStateController>(), "puzzleId", "ch01.chest");
+        Set(code.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.Chest);
         Set(code, "displayTitle", "작은 상자 · 구멍 너머의 네 숫자");
         Set(code, "expectedCode", "2413");
         EventText(code, "onCorrectCode", "찰칵! 곰인형과 첫 번째 길 조각이 들어 있구나.");
         EventText(code, "onAlreadyUnlocked", "상자는 열려 있어. 옆에 남아 있는 물건을 챙기렴.");
-        Bind(chest, new[] { "ch01.box" });
-        Pickup("RabbitDoll", wall, 5,-2.8f,14.1f,1.7f,3,new[] { "ch01.box" });
-        Pickup("BearDoll", wall, 1,-1.5f,14,1.5f,2.5f,new[] { "ch01.chest" });
-        Pickup("PathPieceA", wall, 3.1f,-1.7f,13.8f,1.3f,1.3f,new[] { "ch01.chest" });
+        Bind(chest, new[] { ChapterOneProgressIds.Box });
+        Pickup("RabbitDoll", wall, 5,-2.8f,14.1f,1.7f,3,new[] { ChapterOneProgressIds.Box });
+        Pickup("BearDoll", wall, 1,-1.5f,14,1.5f,2.5f,new[] { ChapterOneProgressIds.Chest });
+        Pickup("PathPieceA", wall, 3.1f,-1.7f,13.8f,1.3f,1.3f,new[] { ChapterOneProgressIds.Chest });
 
         GameObject hole = Visual("CrawlHole_Placeholder", wall, square, -2,-4.1f,14.6f,2.5f,2.3f,true);
         hole.GetComponent<SpriteRenderer>().color = new Color(.08f,.065f,.10f);
@@ -301,6 +330,7 @@ public static class ChapterOneSceneBuilder
         var controller = Object.FindAnyObjectByType<InvestigationCameraController>();
         Set(point, "cameraController", controller);
         Set(clue, "cameraController", controller); Set(clue, "investigationPoint", point); Set(clue, "presentation", presentation);
+        Set(clue, "clueDiscoveredId", ChapterOneProgressIds.HoleClue);
         Label("ClueDigits_Placeholder", wall, "2  4  1  3", -2,-3.8f,14.3f,.27f, Color.white);
         Label("HoleLabel", wall, "작은 구멍 · 들여다보기", -2,-5.9f,14.1f,.65f);
     }
@@ -310,7 +340,7 @@ public static class ChapterOneSceneBuilder
         GameObject table = Visual("DollTable", wall, LoadSprite("테이블"), -5,-2.8f,14.8f,8,4.2f);
         GameObject puzzleRoot = Node("DollPlacement", wall, Vector3.zero);
         ItemPlacementPuzzle puzzle = puzzleRoot.AddComponent<ItemPlacementPuzzle>();
-        Set(puzzle.GetComponent<PuzzleStateController>(), "puzzleId", "ch01.table");
+        Set(puzzle.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.Table);
         Set(puzzle, "inventoryManager", inventory); Set(puzzle, "requireSequence", false);
         List<ItemPlacementSocket> sockets = new();
         for (int i = 0; i < 2; i++)
@@ -320,7 +350,11 @@ public static class ChapterOneSceneBuilder
             GameObject slot = Visual(itemName+"Socket", puzzleRoot.transform, square, x,-.8f,14,2.1f,3.3f,true);
             slot.GetComponent<SpriteRenderer>().color = new Color(.98f,.90f,.70f,.23f);
             ItemPlacementSocket socket = slot.AddComponent<ItemPlacementSocket>();
-            Set(socket, "puzzle", puzzle); Set(socket, "socketId", itemName); Set(socket, "requiredItem", Item(itemName));
+            Set(socket, "puzzle", puzzle);
+            Set(socket, "progressId", i == 0
+                ? ChapterOneProgressIds.BearSocket
+                : ChapterOneProgressIds.RabbitSocket);
+            Set(socket, "requiredItem", Item(itemName));
             Set(socket, "sequenceIndex", i);
             GameObject placed = Visual("Placed"+itemName, wall, Item(itemName).icon, x,-.7f,13.8f,1.7f,3f);
             Set(socket, "placedVisual", placed); placed.SetActive(false);
@@ -332,67 +366,188 @@ public static class ChapterOneSceneBuilder
         Label("DollRule", wall, "갈색 곰  →  키 큰 흰 토끼", -5,2.1f,14,.8f);
         GameObject drawer = Visual("SecretDrawer_Placeholder", wall, square, -5,-3.1f,14.3f,3,1);
         drawer.GetComponent<SpriteRenderer>().color = new Color(.20f,.13f,.09f);
-        Bind(drawer,new[] { "ch01.table" });
-        Pickup("PathPieceB",wall,-5,-3,13.7f,1,1,new[] { "ch01.table" });
-        Visual("Bookcase",wall,LoadSprite("채워 야 할 책장"),6,-.7f,15,6,8);
+        Bind(drawer,new[] { ChapterOneProgressIds.Table });
+        Pickup("PathPieceB",wall,-5,-3,13.7f,1,1,new[] { ChapterOneProgressIds.Table });
+        GameObject bookcase = Visual(
+            "Bookcase",
+            wall,
+            LoadSprite("채워 야 할 책장"),
+            6,
+            -.7f,
+            15,
+            6,
+            8);
+        Material mixMaterial = AssetDatabase.LoadAssetAtPath<Material>(
+            SpriteTextureMixMaterialPath);
+        if (mixMaterial == null)
+            throw new InvalidOperationException(
+                $"Missing texture mix material: {SpriteTextureMixMaterialPath}");
+        bookcase.GetComponent<SpriteRenderer>().sharedMaterial = mixMaterial;
+        SpriteTextureMixer mixer = bookcase.AddComponent<SpriteTextureMixer>();
+        Set(mixer, "targetSprite", LoadSprite("퍼즐 완료 책장"));
+        Set(mixer, "duration", 1.15f);
+        Set(mixer, "ease", DG.Tweening.Ease.InOutSine);
+        ProgressSpriteTextureMixer progressMixer =
+            bookcase.AddComponent<ProgressSpriteTextureMixer>();
+        Set(progressMixer, "completedProgressId", ChapterOneProgressIds.Books);
+
         Pickup("BrownBook",wall,10,-4.1f,14,1.2f,1.6f);
-        Label("BookRule", wall, "가방 첫 줄 · 왼쪽 세 칸\n빨강 → 초록 → 갈색", 6,4.8f,14,.65f);
         GameObject bookPuzzle = Node("BookArrangement",wall,Vector3.zero);
-        InventoryLayoutPuzzle layout = bookPuzzle.AddComponent<InventoryLayoutPuzzle>();
-        Set(layout.GetComponent<PuzzleStateController>(),"puzzleId","ch01.books");
-        Set(layout,"inventoryManager",inventory);
-        Set(layout,"requirements",new List<InventoryLayoutRequirement>
+        ItemPlacementPuzzle layout = bookPuzzle.AddComponent<ItemPlacementPuzzle>();
+        PuzzleStateController bookCompletion =
+            layout.GetComponent<PuzzleStateController>();
+        Set(bookCompletion, "puzzleId", ChapterOneProgressIds.Books);
+        Set(layout, "inventoryManager", inventory);
+        Set(layout, "requireSequence", false);
+        Set(layout, "hidePlacedVisualsWhenCompleted", true);
+
+        var bookSockets = new List<ItemPlacementSocket>
         {
-            new() { item=Item("RedBook"), position=new Vector2Int(0,0) },
-            new() { item=Item("GreenBook"), position=new Vector2Int(1,0) },
-            new() { item=Item("BrownBook"), position=new Vector2Int(2,0) }
-        });
-        EventText(layout,"onLayoutMatched","책의 색이 이어졌어. 책장 아래에서 마지막 길 조각을 찾아보렴.");
-        Pickup("PathPieceC",wall,6,-3.8f,14,1.3f,1.3f,new[] { "ch01.books" });
+            BookSocket(
+                bookPuzzle.transform,
+                wall,
+                "RedBook",
+                "빨간책 옆",
+                ChapterOneProgressIds.RedBookSocket,
+                new Vector3(8.549f, -.665f, 15f),
+                new Vector3(8.5346f, -.6415f, 15f),
+                new Vector3(.436083943f, .6305067f, 1f)),
+            BookSocket(
+                bookPuzzle.transform,
+                                wall,
+                "GreenBook",
+                "초록책 옆",
+                ChapterOneProgressIds.GreenBookSocket,
+                new Vector3(6.28f, 1.65f, 15f),
+                new Vector3(6.2899f, 1.6175f, 15f),
+                new Vector3(.485102445f, .677090943f, 1f)),
+            BookSocket(
+                bookPuzzle.transform,
+                wall,
+                "BrownBook",
+                "갈색 책 옆",
+                ChapterOneProgressIds.BrownBookSocket,
+                new Vector3(5.051f, -2.853f, 15f),
+                new Vector3(5.04f, -2.8804f, 15f),
+                new Vector3(.469135f, .662830651f, 1f))
+        };
+        foreach (ItemPlacementSocket socket in bookSockets)
+            Set(socket, "puzzle", layout);
+        Set(layout, "sockets", bookSockets);
+        Set(
+            progressMixer,
+            "hideWhenCompleted",
+            bookSockets.Select(socket => socket.PlacedVisual).ToArray());
+        EventText(
+            bookCompletion,
+            "onFirstCompleted",
+            "책장이 정리됐어. 책장 아래에서 마지막 길 조각을 찾아보렴.");
+        Pickup("PathPieceC",wall,6,-3.8f,14,1.3f,1.3f,new[] { ChapterOneProgressIds.Books });
+    }
+
+    private static ItemPlacementSocket BookSocket(
+        Transform puzzleRoot,
+        Transform wall,
+        string itemName,
+        string spriteName,
+        OnlyOneUnityString progressId,
+        Vector3 socketPosition,
+        Vector3 visualPosition,
+        Vector3 visualScale)
+    {
+        GameObject slot = Node(
+            itemName + "BookcaseSocket",
+            puzzleRoot,
+            socketPosition);
+        BoxCollider collider = slot.AddComponent<BoxCollider>();
+        collider.size = new Vector3(.62f, 2.15f, .2f);
+
+        ItemPlacementSocket socket = slot.AddComponent<ItemPlacementSocket>();
+        Set(socket, "progressId", progressId);
+        Set(socket, "requiredItem", Item(itemName));
+        Set(socket, "consumeOnPlace", true);
+
+        GameObject placedVisual = Visual(
+            "Placed" + itemName,
+            wall,
+            LoadSprite(spriteName),
+            visualPosition.x,
+            visualPosition.y,
+            visualPosition.z,
+            .38f,
+            1.9f);
+        placedVisual.transform.localScale = visualScale;
+        placedVisual.SetActive(false);
+        Set(socket, "placedVisual", placedVisual);
+        EventText(
+            socket,
+            "onWrongItem",
+            $"{Item(itemName).itemName}을 장착한 뒤 빈자리에 놓아 보렴.");
+        EventText(
+            socket,
+            "onFirstPlaced",
+            $"{Item(itemName).itemName}이 제자리를 찾았어.");
+        return socket;
     }
 
     private static void SetupTrack(Transform wall)
     {
         GameObject machine = Visual("BallTrackMachine",wall,LoadSprite("공굴리기"),0,0,14.7f,11,10,true);
+        machine.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
         MultiStepItemUsePuzzle install = machine.AddComponent<MultiStepItemUsePuzzle>();
-        Set(install.GetComponent<PuzzleStateController>(),"puzzleId","ch01.track_installed");
+        Set(install.GetComponent<PuzzleStateController>(),"puzzleId",ChapterOneProgressIds.TrackInstalled);
         Set(install,"inventoryManager",inventory);
-        var step = new ItemUsePuzzleStep { stepId="track", requiredEquippedItem=Item("CompletedBallTrack"), consumeOnUse=true, onMissingItem=new UnityEvent() };
+        var step = new ItemUsePuzzleStep
+        {
+            progressId = ChapterOneProgressIds.TrackInstallStep,
+            requiredEquippedItem = Item("CompletedBallTrack"),
+            consumeOnUse = true,
+            onMissingItem = new UnityEvent()
+        };
         UnityEventTools.AddStringPersistentListener(step.onMissingItem,presentation.Say,"A, B, C를 가방 안에서 좌우로 이어 조합하고, 완성된 길을 장착해서 끼워 보렴.");
         Set(install,"steps",new List<ItemUsePuzzleStep> { step });
         Label("TrackRule",wall,"A + B + C  →  하나의 길",0,6.1f,14,.9f);
-        GameObject missing = Visual("TrackGap_Placeholder",wall,square,0,0,14.3f,7,.8f);
-        missing.GetComponent<SpriteRenderer>().color = new Color(.12f,.08f,.05f,.9f);
-        Bind(missing,Array.Empty<string>(),new[] { "ch01.track_installed" });
+        GameObject missing = Node("TrackGap_Mask",wall,new Vector3(0,0,14.3f));
+        missing.transform.localScale = new Vector3(7,.8f,1);
+        SpriteMask trackGapMask = missing.AddComponent<SpriteMask>();
+        trackGapMask.sprite = square;
+        Bind(missing,Array.Empty<OnlyOneUnityString>(),new[] { ChapterOneProgressIds.TrackInstalled });
         Transform ball = Visual("RollingBall_Placeholder",wall,Item("PinkBall").icon,-3.2f,3.4f,14.1f,.5f,.5f).transform;
         Vector2[] points = { new(-3.2f,3.4f),new(2.8f,3.4f),new(4,2.1f),new(2.7f,.9f),new(-3.4f,.9f),new(-4,-.4f),new(-3,-1.4f),new(2.8f,-1.4f),new(4,-2.5f),new(2.6f,-3.5f) };
         var waypoints = points.Select((p,i)=>Node("BallWaypoint"+i,wall,new Vector3(p.x,p.y,14.1f)).transform).ToArray();
         ChapterOneBallRun roll = Node("BallRun",wall,Vector3.zero).AddComponent<ChapterOneBallRun>();
         Set(roll,"ball",ball); Set(roll,"waypoints",waypoints); Set(roll,"presentation",presentation);
+        Set(roll,"trackInstalledId",ChapterOneProgressIds.TrackInstalled);
+        Set(roll,"ballFinishedId",ChapterOneProgressIds.BallFinished);
         GameObject cage = Visual("CatLatch_Placeholder",wall,square,8,-2,14.7f,3.5f,4.3f);
         cage.GetComponent<SpriteRenderer>().color = new Color(.40f,.30f,.23f,.6f);
         GameObject lockedCat = Visual("LockedCat",wall,Item("CatDoll").icon,8,-2,14.4f,2.2f,3.5f);
-        Bind(lockedCat,Array.Empty<string>(),new[] { "ch01.ball_finished" });
-        Pickup("CatDoll",wall,8,-2,14.2f,2.2f,3.5f,new[] { "ch01.ball_finished" });
-        Pickup("PinkBall",wall,3,-4.7f,13.8f,.8f,.8f,new[] { "ch01.ball_finished" });
+        Bind(lockedCat,Array.Empty<OnlyOneUnityString>(),new[] { ChapterOneProgressIds.BallFinished });
+        Pickup("CatDoll",wall,8,-2,14.2f,2.2f,3.5f,new[] { ChapterOneProgressIds.BallFinished });
+        Pickup("PinkBall",wall,3,-4.7f,13.8f,.8f,.8f,new[] { ChapterOneProgressIds.BallFinished });
         Label("CatLabel",wall,"길의 끝에서 기다리는 친구",8,1,14,.65f);
     }
 
-    private static GameObject Pickup(string itemName, Transform parent, float x,float y,float z,float width,float height,string[] required=null)
+    private static GameObject Pickup(string itemName, Transform parent, float x,float y,float z,float width,float height,OnlyOneUnityString[] required=null)
     {
-        string id = "ch01.pickup."+itemName;
+        OnlyOneUnityString id = ChapterOneProgressIds.Pickup(itemName);
         GameObject go = Visual("Pickup_"+itemName,parent,Item(itemName).icon,x,y,z,width,height,true);
         Itemgetbase pickup = go.AddComponent<Itemgetbase>(); pickup.item=Item(itemName);
         Set(pickup,"inventoryManager",inventory); Set(pickup,"persistentPickupId",id);
         Set(pickup,"keepForStateRestore",true);
-        Bind(go,required ?? Array.Empty<string>(),new[] { id });
+        Bind(go,required ?? Array.Empty<OnlyOneUnityString>(),new[] { id });
         if (itemName.StartsWith("PathPiece")) Label(itemName+"Label",go.transform,itemName.Substring(itemName.Length-1),0,0,-.1f,.5f);
         return go;
     }
 
-    private static void Bind(GameObject go,string[] required,string[] excluded=null)
+    private static void Bind(GameObject go,OnlyOneUnityString[] required,OnlyOneUnityString[] excluded=null)
     {
-        bindings.Add(new ChapterOneStateView.Binding { target=go,required=required,excluded=excluded??Array.Empty<string>() });
+        bindings.Add(new ChapterOneStateView.Binding
+        {
+            target = go,
+            required = required,
+            excluded = excluded ?? Array.Empty<OnlyOneUnityString>()
+        });
     }
 
     private static GameObject Node(string name,Transform parent,Vector3 position)
