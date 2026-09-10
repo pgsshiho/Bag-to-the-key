@@ -30,6 +30,17 @@ public class InventoryUI : MonoBehaviour
     private InventoryItemView activeDragView;
     private ItemInstance activeDragItem;
     private ItemInstance selectedItem;
+    private readonly List<InventoryItemView> activeItemViews = new List<InventoryItemView>();
+    private readonly Stack<InventoryItemView> itemViewPool = new Stack<InventoryItemView>();
+    private readonly List<InventoryActionOverlay> combinationOverlays =
+        new List<InventoryActionOverlay>();
+    private readonly List<InventoryActionOverlay> disassemblyOverlays =
+        new List<InventoryActionOverlay>();
+    private readonly List<InventoryActionOverlay> discardOverlays =
+        new List<InventoryActionOverlay>();
+    private readonly Stack<InventoryActionOverlay> actionOverlayPool =
+        new Stack<InventoryActionOverlay>();
+    private Transform poolRoot;
     private Vector2 dragOffset;
     private int dragOriginalX;
     private int dragOriginalY;
@@ -137,7 +148,7 @@ public class InventoryUI : MonoBehaviour
         if (activeDragItem == selectedItem)
         {
             RectTransform activeRect = activeDragView != null
-                ? activeDragView.GetComponent<RectTransform>()
+                ? activeDragView.RectTransform
                 : null;
             Vector2 oldSize = activeRect != null ? activeRect.sizeDelta : Vector2.one;
             Vector2 normalizedGrab = new Vector2(
@@ -204,7 +215,7 @@ public class InventoryUI : MonoBehaviour
         if (MoveMode != InventoryMoveMode.ClickToClick || activeDragItem == null) return;
         if (activeDragView == null) return;
         Vector2Int previewPosition = AnchoredToGrid(
-            activeDragView.GetComponent<RectTransform>().anchoredPosition);
+            activeDragView.RectTransform.anchoredPosition);
         CompleteActiveMove(previewPosition.x, previewPosition.y);
     }
 
@@ -226,7 +237,7 @@ public class InventoryUI : MonoBehaviour
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(itemContainer, screenPosition, eventCamera, out Vector2 localPoint);
         Vector2 pointerAnchored = LocalToAnchored(localPoint);
-        dragOffset = view.GetComponent<RectTransform>().anchoredPosition - pointerAnchored;
+        dragOffset = view.RectTransform.anchoredPosition - pointerAnchored;
 
         UpdateSelectionVisuals();
         Drag(view, screenPosition, eventCamera);
@@ -240,7 +251,7 @@ public class InventoryUI : MonoBehaviour
         lastPointerPosition = screenPosition;
         lastEventCamera = eventCamera;
 
-        RectTransform rect = view.GetComponent<RectTransform>();
+        RectTransform rect = view.RectTransform;
         rect.anchoredPosition = LocalToAnchored(localPoint) + dragOffset;
 
         Vector2Int gridPosition = AnchoredToGrid(rect.anchoredPosition);
@@ -259,7 +270,7 @@ public class InventoryUI : MonoBehaviour
             && CompleteActiveEquip())
             return;
 
-        Vector2Int gridPosition = AnchoredToGrid(view.GetComponent<RectTransform>().anchoredPosition);
+        Vector2Int gridPosition = AnchoredToGrid(view.RectTransform.anchoredPosition);
         CompleteActiveMove(gridPosition.x, gridPosition.y);
     }
 
@@ -272,17 +283,14 @@ public class InventoryUI : MonoBehaviour
     {
         if (activeDragItem != null) return;
 
-        foreach (Transform child in itemContainer)
-        {
-            if (child.GetComponent<InventoryItemView>() != null)
-                Destroy(child.gameObject);
-        }
+        ReleaseAllItemViews();
 
         foreach (ItemInstance item in inventoryManager.items)
         {
-            InventoryItemView itemView = Instantiate(itemViewPrefab, itemContainer);
+            InventoryItemView itemView = GetItemView();
             itemView.Init(item, cellSize, this);
             itemView.SetSelected(item == selectedItem);
+            activeItemViews.Add(itemView);
         }
 
         if (selectedItem != null && !inventoryManager.items.Contains(selectedItem))
@@ -300,6 +308,83 @@ public class InventoryUI : MonoBehaviour
             selectionTooltipRect.SetAsLastSibling();
 
         UpdateActionButtons();
+    }
+
+    private InventoryItemView GetItemView()
+    {
+        while (itemViewPool.Count > 0)
+        {
+            InventoryItemView pooledView = itemViewPool.Pop();
+            if (pooledView == null) continue;
+
+            pooledView.transform.SetParent(itemContainer, false);
+            pooledView.gameObject.SetActive(true);
+            return pooledView;
+        }
+
+        return Instantiate(itemViewPrefab, itemContainer);
+    }
+
+    private void ReleaseAllItemViews()
+    {
+        foreach (InventoryItemView view in activeItemViews)
+            ReleaseItemView(view);
+        activeItemViews.Clear();
+    }
+
+    private void ReleaseItemView(InventoryItemView view)
+    {
+        if (view == null) return;
+
+        view.gameObject.SetActive(false);
+        view.transform.SetParent(GetPoolRoot(), false);
+        itemViewPool.Push(view);
+    }
+
+    private InventoryActionOverlay GetActionOverlay(
+        RectTransform container,
+        List<InventoryActionOverlay> activeOverlays)
+    {
+        InventoryActionOverlay overlay = null;
+        while (actionOverlayPool.Count > 0 && overlay == null)
+            overlay = actionOverlayPool.Pop();
+
+        if (overlay == null)
+            overlay = Instantiate(actionOverlayPrefab, container);
+        else
+        {
+            overlay.transform.SetParent(container, false);
+            overlay.gameObject.SetActive(true);
+        }
+
+        activeOverlays.Add(overlay);
+        return overlay;
+    }
+
+    private void ReleaseOverlays(List<InventoryActionOverlay> activeOverlays)
+    {
+        foreach (InventoryActionOverlay overlay in activeOverlays)
+        {
+            if (overlay == null) continue;
+
+            overlay.ResetForReuse();
+            overlay.gameObject.SetActive(false);
+            overlay.transform.SetParent(GetPoolRoot(), false);
+            actionOverlayPool.Push(overlay);
+        }
+
+        activeOverlays.Clear();
+    }
+
+    private Transform GetPoolRoot()
+    {
+        if (poolRoot != null) return poolRoot;
+
+        GameObject poolObject = new GameObject("InventoryUiPool", typeof(RectTransform));
+        poolRoot = poolObject.transform;
+        poolRoot.SetParent(transform, false);
+        poolRoot.gameObject.SetActive(false);
+        return poolRoot;
     }
 
     private void CreateSlots()
@@ -421,7 +506,7 @@ public class InventoryUI : MonoBehaviour
             eventCamera,
             out Vector2 localPoint);
         Vector2 pointerAnchored = LocalToAnchored(localPoint);
-        dragOffset = view.GetComponent<RectTransform>().anchoredPosition - pointerAnchored;
+        dragOffset = view.RectTransform.anchoredPosition - pointerAnchored;
         view.SetRaycastBlocking(false);
         view.transform.SetAsLastSibling();
         Drag(view, screenPosition, eventCamera);
@@ -507,11 +592,8 @@ public class InventoryUI : MonoBehaviour
 
     private void UpdateSelectionVisuals()
     {
-        foreach (Transform child in itemContainer)
-        {
-            InventoryItemView view = child.GetComponent<InventoryItemView>();
-            if (view != null) view.SetSelected(view.Item == selectedItem);
-        }
+        foreach (InventoryItemView view in activeItemViews)
+            view.SetSelected(view.Item == selectedItem);
     }
 
     private void HandleCandidatesChanged(IReadOnlyList<InventoryCombinationCandidate> candidates)
@@ -572,7 +654,7 @@ public class InventoryUI : MonoBehaviour
         float tooltipHeight = Mathf.Max(54f, preferredSize.y + 16f);
 
         RectTransform selectedRect = activeDragItem == selectedItem && activeDragView != null
-            ? activeDragView.GetComponent<RectTransform>()
+            ? activeDragView.RectTransform
             : null;
         float itemCenterX = selectedRect != null
             ? selectedRect.anchoredPosition.x + selectedRect.rect.width * 0.5f
@@ -593,9 +675,8 @@ public class InventoryUI : MonoBehaviour
 
     private InventoryItemView FindItemView(ItemInstance item)
     {
-        foreach (Transform child in itemContainer)
+        foreach (InventoryItemView view in activeItemViews)
         {
-            InventoryItemView view = child.GetComponent<InventoryItemView>();
             if (view != null && view.Item == item)
                 return view;
         }
@@ -642,9 +723,7 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearCombinationOverlays()
     {
-        if (combinationOverlayContainer == null) return;
-        foreach (Transform child in combinationOverlayContainer)
-            Destroy(child.gameObject);
+        ReleaseOverlays(combinationOverlays);
     }
 
     private void CreateCombinationOverlay(InventoryCombinationCandidate candidate, Color color, int index)
@@ -669,7 +748,9 @@ public class InventoryUI : MonoBehaviour
             ? candidate.Recipe.recipeId
             : candidate.Recipe.recipeName;
 
-        InventoryActionOverlay overlay = Instantiate(actionOverlayPrefab, combinationOverlayContainer);
+        InventoryActionOverlay overlay = GetActionOverlay(
+            combinationOverlayContainer,
+            combinationOverlays);
         overlay.name = $"CombinationCandidate {index}: {recipeName}";
         RectTransform overlayRect = (RectTransform)overlay.transform;
         overlayRect.anchorMin = new Vector2(0f, 1f);
@@ -689,7 +770,9 @@ public class InventoryUI : MonoBehaviour
 
         ItemInstance itemToDisassemble = selectedItem;
         Color color = new Color(1f, 0.32f, 0.2f, 1f);
-        InventoryActionOverlay overlay = Instantiate(actionOverlayPrefab, disassemblyOverlayContainer);
+        InventoryActionOverlay overlay = GetActionOverlay(
+            disassemblyOverlayContainer,
+            disassemblyOverlays);
         overlay.name = "DisassemblyCandidate";
         RectTransform overlayRect = (RectTransform)overlay.transform;
         overlayRect.anchorMin = new Vector2(0f, 1f);
@@ -710,9 +793,7 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearDisassemblyOverlay()
     {
-        if (disassemblyOverlayContainer == null) return;
-        foreach (Transform child in disassemblyOverlayContainer)
-            Destroy(child.gameObject);
+        ReleaseOverlays(disassemblyOverlays);
     }
 
     private void UpdateDiscardOverlay()
@@ -725,7 +806,9 @@ public class InventoryUI : MonoBehaviour
             return;
 
         ItemInstance itemToDiscard = selectedItem;
-        InventoryActionOverlay overlay = Instantiate(actionOverlayPrefab, discardOverlayContainer);
+        InventoryActionOverlay overlay = GetActionOverlay(
+            discardOverlayContainer,
+            discardOverlays);
         overlay.name = "DiscardCandidate";
         RectTransform overlayRect = (RectTransform)overlay.transform;
         overlayRect.anchorMin = new Vector2(0f, 1f);
@@ -751,9 +834,7 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearDiscardOverlay()
     {
-        if (discardOverlayContainer == null) return;
-        foreach (Transform child in discardOverlayContainer)
-            Destroy(child.gameObject);
+        ReleaseOverlays(discardOverlays);
     }
 
     private void HandleEquipmentSlotClick()

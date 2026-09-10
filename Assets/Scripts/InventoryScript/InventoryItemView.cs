@@ -24,6 +24,14 @@ public class InventoryItemView
 
     public ItemInstance Item => item;
     public TMP_FontAsset DisplayFont => unknownRecipeText != null ? unknownRecipeText.font : null;
+    public RectTransform RectTransform
+    {
+        get
+        {
+            EnsureInitialized();
+            return rectTransform;
+        }
+    }
 
     private void Awake()
     {
@@ -118,8 +126,7 @@ public class InventoryItemView
         if (isInitialized)
             return true;
 
-        rectTransform = GetComponent<RectTransform>();
-        if (rectTransform == null)
+        if (!TryGetComponent(out rectTransform))
         {
             Debug.LogError(
                 $"{name}: InventoryItemView must be attached to a UI object with a RectTransform.",

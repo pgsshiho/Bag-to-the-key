@@ -65,6 +65,7 @@ public class TransformTweeningComponent : MonoBehaviour
     {
         _tweenSequence = DOTween.Sequence();
         _tweenSequence.SetAutoKill(false);
+        _tweenSequence.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         _tweenSequence.Pause();
 
         if (IsPositionTweeningEnabled)
@@ -96,6 +97,13 @@ public class TransformTweeningComponent : MonoBehaviour
 
     public void TweeningExecute()
     {
-        _tweenSequence.Restart();
+        if (_tweenSequence != null && _tweenSequence.IsActive())
+            _tweenSequence.Restart();
+    }
+
+    private void OnDestroy()
+    {
+        _tweenSequence?.Kill();
+        _tweenSequence = null;
     }
 }

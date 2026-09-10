@@ -8,6 +8,11 @@ public class InventoryActionOverlay : MonoBehaviour
     [SerializeField] private Button actionButton;
     [SerializeField] private TMP_Text label;
 
+    public void ResetForReuse()
+    {
+        actionButton.onClick.RemoveAllListeners();
+    }
+
     public Button Configure(Color color, string caption, bool attachToLeft = false, bool showBorder = true)
     {
         foreach (Image border in borders)
