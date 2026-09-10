@@ -4,12 +4,23 @@ using UnityEngine.Events;
 [RequireComponent(typeof(PuzzleStateController))]
 public class NumericCodeLock : MonoBehaviour, IWorldInteractable
 {
-    [SerializeField] private string displayTitle = "암호 입력";
-    [SerializeField] private string expectedCode = "0000";
-    [SerializeField, Min(1)] private int maxInputLength = 4;
-    [SerializeField] private UnityEvent onCorrectCode;
-    [SerializeField] private UnityEvent onWrongCode;
-    [SerializeField] private UnityEvent onAlreadyUnlocked;
+    [SerializeField]
+    private string displayTitle = "암호 입력";
+
+    [SerializeField]
+    private string expectedCode = "0000";
+
+    [SerializeField, Min(1)]
+    private int maxInputLength = 4;
+
+    [SerializeField]
+    private UnityEvent onCorrectCode;
+
+    [SerializeField]
+    private UnityEvent onWrongCode;
+
+    [SerializeField]
+    private UnityEvent onAlreadyUnlocked;
 
     private PuzzleStateController completion;
 

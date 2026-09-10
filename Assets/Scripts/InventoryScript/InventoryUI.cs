@@ -23,29 +23,42 @@ public class InventoryUI : MonoBehaviour
     };
     [SerializeField] private Color discardColor = new Color(0.55f, 0.16f, 0.12f, 1f);
 
+    [SerializeField] private InventoryActionOverlay actionOverlayPrefab;
+
     private InventorySlotView[,] slots;
     private InventoryCombinationService combinationService;
     private InventoryItemView activeDragView;
     private ItemInstance activeDragItem;
     private ItemInstance selectedItem;
+    private readonly List<InventoryItemView> activeItemViews = new List<InventoryItemView>();
+    private readonly Stack<InventoryItemView> itemViewPool = new Stack<InventoryItemView>();
+    private readonly List<InventoryActionOverlay> combinationOverlays =
+        new List<InventoryActionOverlay>();
+    private readonly List<InventoryActionOverlay> disassemblyOverlays =
+        new List<InventoryActionOverlay>();
+    private readonly List<InventoryActionOverlay> discardOverlays =
+        new List<InventoryActionOverlay>();
+    private readonly Stack<InventoryActionOverlay> actionOverlayPool =
+        new Stack<InventoryActionOverlay>();
+    private Transform poolRoot;
     private Vector2 dragOffset;
     private int dragOriginalX;
     private int dragOriginalY;
     private bool dragOriginalRotated;
     private Vector2 lastPointerPosition;
     private Camera lastEventCamera;
-    private Button catalogButton;
-    private GameObject catalogPanel;
-    private Text catalogText;
-    private RectTransform combinationOverlayContainer;
-    private RectTransform disassemblyOverlayContainer;
-    private RectTransform discardOverlayContainer;
-    private RectTransform selectionTooltipRect;
-    private TextMeshProUGUI selectionTooltipText;
-    private RectTransform equipmentSlotRect;
-    private Image equipmentSlotImage;
-    private Image equipmentIconImage;
-    private TextMeshProUGUI equipmentLabel;
+    [SerializeField] private Button catalogButton;
+    [SerializeField] private GameObject catalogPanel;
+    [SerializeField] private TextMeshProUGUI catalogText;
+    [SerializeField] private RectTransform combinationOverlayContainer;
+    [SerializeField] private RectTransform disassemblyOverlayContainer;
+    [SerializeField] private RectTransform discardOverlayContainer;
+    [SerializeField] private RectTransform selectionTooltipRect;
+    [SerializeField] private TextMeshProUGUI selectionTooltipText;
+    [SerializeField] private RectTransform equipmentSlotRect;
+    [SerializeField] private Image equipmentSlotImage;
+    [SerializeField] private Image equipmentIconImage;
+    [SerializeField] private TextMeshProUGUI equipmentLabel;
 
     private readonly Color equipmentSlotColor = new Color(0.12f, 0.1f, 0.08f, 0.96f);
     private readonly Color equipmentSlotHoverColor = new Color(0.82f, 0.62f, 0.16f, 1f);
@@ -83,6 +96,8 @@ public class InventoryUI : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (catalogButton != null) catalogButton.onClick.RemoveListener(ToggleCatalog);
+        if (equipmentSlotRect != null) equipmentSlotRect.GetComponent<Button>().onClick.RemoveListener(HandleEquipmentSlotClick);
         if (combinationService != null)
             combinationService.OnCandidatesChanged -= HandleCandidatesChanged;
 
@@ -98,13 +113,11 @@ public class InventoryUI : MonoBehaviour
         if (combinationService != null)
             combinationService.OnCandidatesChanged += HandleCandidatesChanged;
 
+        catalogButton.onClick.AddListener(ToggleCatalog);
+        equipmentSlotRect.GetComponent<Button>().onClick.AddListener(HandleEquipmentSlotClick);
+        catalogPanel.SetActive(false);
+        selectionTooltipRect.gameObject.SetActive(false);
         CreateSlots();
-        EnsureCombinationOverlay();
-        EnsureDisassemblyOverlay();
-        EnsureDiscardOverlay();
-        EnsureSelectionTooltip();
-        EnsureCatalogUI();
-        EnsureEquipmentUI();
         RefreshItems();
         combinationService?.RefreshCandidates();
 
@@ -135,7 +148,7 @@ public class InventoryUI : MonoBehaviour
         if (activeDragItem == selectedItem)
         {
             RectTransform activeRect = activeDragView != null
-                ? activeDragView.GetComponent<RectTransform>()
+                ? activeDragView.RectTransform
                 : null;
             Vector2 oldSize = activeRect != null ? activeRect.sizeDelta : Vector2.one;
             Vector2 normalizedGrab = new Vector2(
@@ -202,7 +215,7 @@ public class InventoryUI : MonoBehaviour
         if (MoveMode != InventoryMoveMode.ClickToClick || activeDragItem == null) return;
         if (activeDragView == null) return;
         Vector2Int previewPosition = AnchoredToGrid(
-            activeDragView.GetComponent<RectTransform>().anchoredPosition);
+            activeDragView.RectTransform.anchoredPosition);
         CompleteActiveMove(previewPosition.x, previewPosition.y);
     }
 
@@ -224,7 +237,7 @@ public class InventoryUI : MonoBehaviour
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(itemContainer, screenPosition, eventCamera, out Vector2 localPoint);
         Vector2 pointerAnchored = LocalToAnchored(localPoint);
-        dragOffset = view.GetComponent<RectTransform>().anchoredPosition - pointerAnchored;
+        dragOffset = view.RectTransform.anchoredPosition - pointerAnchored;
 
         UpdateSelectionVisuals();
         Drag(view, screenPosition, eventCamera);
@@ -238,7 +251,7 @@ public class InventoryUI : MonoBehaviour
         lastPointerPosition = screenPosition;
         lastEventCamera = eventCamera;
 
-        RectTransform rect = view.GetComponent<RectTransform>();
+        RectTransform rect = view.RectTransform;
         rect.anchoredPosition = LocalToAnchored(localPoint) + dragOffset;
 
         Vector2Int gridPosition = AnchoredToGrid(rect.anchoredPosition);
@@ -257,7 +270,7 @@ public class InventoryUI : MonoBehaviour
             && CompleteActiveEquip())
             return;
 
-        Vector2Int gridPosition = AnchoredToGrid(view.GetComponent<RectTransform>().anchoredPosition);
+        Vector2Int gridPosition = AnchoredToGrid(view.RectTransform.anchoredPosition);
         CompleteActiveMove(gridPosition.x, gridPosition.y);
     }
 
@@ -270,17 +283,14 @@ public class InventoryUI : MonoBehaviour
     {
         if (activeDragItem != null) return;
 
-        foreach (Transform child in itemContainer)
-        {
-            if (child.GetComponent<InventoryItemView>() != null)
-                Destroy(child.gameObject);
-        }
+        ReleaseAllItemViews();
 
         foreach (ItemInstance item in inventoryManager.items)
         {
-            InventoryItemView itemView = Instantiate(itemViewPrefab, itemContainer);
+            InventoryItemView itemView = GetItemView();
             itemView.Init(item, cellSize, this);
             itemView.SetSelected(item == selectedItem);
+            activeItemViews.Add(itemView);
         }
 
         if (selectedItem != null && !inventoryManager.items.Contains(selectedItem))
@@ -298,6 +308,83 @@ public class InventoryUI : MonoBehaviour
             selectionTooltipRect.SetAsLastSibling();
 
         UpdateActionButtons();
+    }
+
+    private InventoryItemView GetItemView()
+    {
+        while (itemViewPool.Count > 0)
+        {
+            InventoryItemView pooledView = itemViewPool.Pop();
+            if (pooledView == null) continue;
+
+            pooledView.transform.SetParent(itemContainer, false);
+            pooledView.gameObject.SetActive(true);
+            return pooledView;
+        }
+
+        return Instantiate(itemViewPrefab, itemContainer);
+    }
+
+    private void ReleaseAllItemViews()
+    {
+        foreach (InventoryItemView view in activeItemViews)
+            ReleaseItemView(view);
+        activeItemViews.Clear();
+    }
+
+    private void ReleaseItemView(InventoryItemView view)
+    {
+        if (view == null) return;
+
+        view.gameObject.SetActive(false);
+        view.transform.SetParent(GetPoolRoot(), false);
+        itemViewPool.Push(view);
+    }
+
+    private InventoryActionOverlay GetActionOverlay(
+        RectTransform container,
+        List<InventoryActionOverlay> activeOverlays)
+    {
+        InventoryActionOverlay overlay = null;
+        while (actionOverlayPool.Count > 0 && overlay == null)
+            overlay = actionOverlayPool.Pop();
+
+        if (overlay == null)
+            overlay = Instantiate(actionOverlayPrefab, container);
+        else
+        {
+            overlay.transform.SetParent(container, false);
+            overlay.gameObject.SetActive(true);
+        }
+
+        activeOverlays.Add(overlay);
+        return overlay;
+    }
+
+    private void ReleaseOverlays(List<InventoryActionOverlay> activeOverlays)
+    {
+        foreach (InventoryActionOverlay overlay in activeOverlays)
+        {
+            if (overlay == null) continue;
+
+            overlay.ResetForReuse();
+            overlay.gameObject.SetActive(false);
+            overlay.transform.SetParent(GetPoolRoot(), false);
+            actionOverlayPool.Push(overlay);
+        }
+
+        activeOverlays.Clear();
+    }
+
+    private Transform GetPoolRoot()
+    {
+        if (poolRoot != null) return poolRoot;
+
+        GameObject poolObject = new GameObject("InventoryUiPool", typeof(RectTransform));
+        poolRoot = poolObject.transform;
+        poolRoot.SetParent(transform, false);
+        poolRoot.gameObject.SetActive(false);
+        return poolRoot;
     }
 
     private void CreateSlots()
@@ -419,7 +506,7 @@ public class InventoryUI : MonoBehaviour
             eventCamera,
             out Vector2 localPoint);
         Vector2 pointerAnchored = LocalToAnchored(localPoint);
-        dragOffset = view.GetComponent<RectTransform>().anchoredPosition - pointerAnchored;
+        dragOffset = view.RectTransform.anchoredPosition - pointerAnchored;
         view.SetRaycastBlocking(false);
         view.transform.SetAsLastSibling();
         Drag(view, screenPosition, eventCamera);
@@ -505,11 +592,8 @@ public class InventoryUI : MonoBehaviour
 
     private void UpdateSelectionVisuals()
     {
-        foreach (Transform child in itemContainer)
-        {
-            InventoryItemView view = child.GetComponent<InventoryItemView>();
-            if (view != null) view.SetSelected(view.Item == selectedItem);
-        }
+        foreach (InventoryItemView view in activeItemViews)
+            view.SetSelected(view.Item == selectedItem);
     }
 
     private void HandleCandidatesChanged(IReadOnlyList<InventoryCombinationCandidate> candidates)
@@ -517,99 +601,8 @@ public class InventoryUI : MonoBehaviour
         RenderCombinationCandidates(candidates);
     }
 
-    private void EnsureCombinationOverlay()
-    {
-        if (combinationOverlayContainer != null) return;
-
-        GameObject overlayObject = new GameObject("CombinationOverlays", typeof(RectTransform));
-        overlayObject.transform.SetParent(itemContainer, false);
-        combinationOverlayContainer = overlayObject.GetComponent<RectTransform>();
-        combinationOverlayContainer.anchorMin = Vector2.zero;
-        combinationOverlayContainer.anchorMax = Vector2.one;
-        combinationOverlayContainer.offsetMin = Vector2.zero;
-        combinationOverlayContainer.offsetMax = Vector2.zero;
-        combinationOverlayContainer.SetAsLastSibling();
-    }
-
-    private void EnsureDisassemblyOverlay()
-    {
-        if (disassemblyOverlayContainer != null) return;
-
-        GameObject overlayObject = new GameObject("DisassemblyOverlay", typeof(RectTransform));
-        overlayObject.transform.SetParent(itemContainer, false);
-        disassemblyOverlayContainer = overlayObject.GetComponent<RectTransform>();
-        disassemblyOverlayContainer.anchorMin = Vector2.zero;
-        disassemblyOverlayContainer.anchorMax = Vector2.one;
-        disassemblyOverlayContainer.offsetMin = Vector2.zero;
-        disassemblyOverlayContainer.offsetMax = Vector2.zero;
-        disassemblyOverlayContainer.SetAsLastSibling();
-    }
-
-    private void EnsureDiscardOverlay()
-    {
-        if (discardOverlayContainer != null) return;
-
-        GameObject overlayObject = new GameObject("DiscardOverlay", typeof(RectTransform));
-        overlayObject.transform.SetParent(itemContainer, false);
-        discardOverlayContainer = overlayObject.GetComponent<RectTransform>();
-        discardOverlayContainer.anchorMin = Vector2.zero;
-        discardOverlayContainer.anchorMax = Vector2.one;
-        discardOverlayContainer.offsetMin = Vector2.zero;
-        discardOverlayContainer.offsetMax = Vector2.zero;
-        discardOverlayContainer.SetAsLastSibling();
-    }
-
-    private void EnsureSelectionTooltip()
-    {
-        if (selectionTooltipRect != null) return;
-
-        GameObject tooltipObject = new GameObject(
-            "SelectionTooltip",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image),
-            typeof(Outline));
-        tooltipObject.transform.SetParent(itemContainer, false);
-        selectionTooltipRect = tooltipObject.GetComponent<RectTransform>();
-        selectionTooltipRect.anchorMin = new Vector2(0f, 1f);
-        selectionTooltipRect.anchorMax = new Vector2(0f, 1f);
-        selectionTooltipRect.pivot = new Vector2(0.5f, 1f);
-
-        Image background = tooltipObject.GetComponent<Image>();
-        background.color = new Color(0.075f, 0.065f, 0.055f, 0.97f);
-        background.raycastTarget = false;
-
-        Outline outline = tooltipObject.GetComponent<Outline>();
-        outline.effectColor = new Color(0.78f, 0.63f, 0.32f, 0.9f);
-        outline.effectDistance = new Vector2(1f, -1f);
-
-        GameObject textObject = new GameObject(
-            "Text",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(TextMeshProUGUI));
-        textObject.transform.SetParent(selectionTooltipRect, false);
-        selectionTooltipText = textObject.GetComponent<TextMeshProUGUI>();
-        selectionTooltipText.alignment = TextAlignmentOptions.TopLeft;
-        selectionTooltipText.color = Color.white;
-        selectionTooltipText.fontSize = 17f;
-        selectionTooltipText.enableAutoSizing = true;
-        selectionTooltipText.fontSizeMin = 12f;
-        selectionTooltipText.fontSizeMax = 17f;
-        selectionTooltipText.raycastTarget = false;
-
-        RectTransform textRect = selectionTooltipText.rectTransform;
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(10f, 8f);
-        textRect.offsetMax = new Vector2(-10f, -8f);
-
-        selectionTooltipRect.gameObject.SetActive(false);
-    }
-
     private void UpdateSelectionTooltip()
     {
-        EnsureSelectionTooltip();
         if (selectedItem == null
             || selectedItem.data == null
             || !inventoryManager.items.Contains(selectedItem))
@@ -661,7 +654,7 @@ public class InventoryUI : MonoBehaviour
         float tooltipHeight = Mathf.Max(54f, preferredSize.y + 16f);
 
         RectTransform selectedRect = activeDragItem == selectedItem && activeDragView != null
-            ? activeDragView.GetComponent<RectTransform>()
+            ? activeDragView.RectTransform
             : null;
         float itemCenterX = selectedRect != null
             ? selectedRect.anchoredPosition.x + selectedRect.rect.width * 0.5f
@@ -682,9 +675,8 @@ public class InventoryUI : MonoBehaviour
 
     private InventoryItemView FindItemView(ItemInstance item)
     {
-        foreach (Transform child in itemContainer)
+        foreach (InventoryItemView view in activeItemViews)
         {
-            InventoryItemView view = child.GetComponent<InventoryItemView>();
             if (view != null && view.Item == item)
                 return view;
         }
@@ -704,7 +696,6 @@ public class InventoryUI : MonoBehaviour
 
     private void RenderCombinationCandidates(IReadOnlyList<InventoryCombinationCandidate> candidates)
     {
-        EnsureCombinationOverlay();
         ClearCombinationOverlays();
         if (candidates == null) return;
 
@@ -732,9 +723,7 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearCombinationOverlays()
     {
-        if (combinationOverlayContainer == null) return;
-        foreach (Transform child in combinationOverlayContainer)
-            Destroy(child.gameObject);
+        ReleaseOverlays(combinationOverlays);
     }
 
     private void CreateCombinationOverlay(InventoryCombinationCandidate candidate, Color color, int index)
@@ -759,109 +748,40 @@ public class InventoryUI : MonoBehaviour
             ? candidate.Recipe.recipeId
             : candidate.Recipe.recipeName;
 
-        GameObject overlayObject = new GameObject($"CombinationCandidate {index}: {recipeName}", typeof(RectTransform));
-        overlayObject.transform.SetParent(combinationOverlayContainer, false);
-        RectTransform overlayRect = overlayObject.GetComponent<RectTransform>();
+        InventoryActionOverlay overlay = GetActionOverlay(
+            combinationOverlayContainer,
+            combinationOverlays);
+        overlay.name = $"CombinationCandidate {index}: {recipeName}";
+        RectTransform overlayRect = (RectTransform)overlay.transform;
         overlayRect.anchorMin = new Vector2(0f, 1f);
         overlayRect.anchorMax = new Vector2(0f, 1f);
         overlayRect.pivot = new Vector2(0f, 1f);
         overlayRect.anchoredPosition = new Vector2(minX * cellSize, -minY * cellSize);
         overlayRect.sizeDelta = new Vector2((maxX - minX) * cellSize, (maxY - minY) * cellSize);
 
-        const float borderThickness = 4f;
-        CreateBorder(overlayRect, "Top", color, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(0f, borderThickness));
-        CreateBorder(overlayRect, "Bottom", color, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(0f, borderThickness));
-        CreateBorder(overlayRect, "Left", color, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(borderThickness, 0f));
-        CreateBorder(overlayRect, "Right", color, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0f), new Vector2(borderThickness, 0f));
-
-        Button button = CreateAttachedActionButton(overlayRect, color, "Combine", "합성");
+        Button button = overlay.Configure(color, "합성");
         button.onClick.AddListener(() => combinationService.TryCombine(candidate));
-    }
-
-    private static void CreateBorder(
-        RectTransform parent,
-        string borderName,
-        Color color,
-        Vector2 anchorMin,
-        Vector2 anchorMax,
-        Vector2 pivot,
-        Vector2 sizeDelta)
-    {
-        GameObject borderObject = new GameObject(borderName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        borderObject.transform.SetParent(parent, false);
-        RectTransform rect = borderObject.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.pivot = pivot;
-        rect.anchoredPosition = Vector2.zero;
-        rect.sizeDelta = sizeDelta;
-
-        Image image = borderObject.GetComponent<Image>();
-        image.color = color;
-        image.raycastTarget = false;
-    }
-
-    private static Button CreateAttachedActionButton(
-        RectTransform parent,
-        Color color,
-        string objectName,
-        string label,
-        bool attachToLeft = false)
-    {
-        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        buttonObject.transform.SetParent(parent, false);
-        RectTransform rect = buttonObject.GetComponent<RectTransform>();
-        Vector2 topCorner = attachToLeft ? new Vector2(0f, 1f) : Vector2.one;
-        rect.anchorMin = topCorner;
-        rect.anchorMax = topCorner;
-        rect.pivot = attachToLeft ? Vector2.one : new Vector2(0f, 1f);
-        rect.anchoredPosition = new Vector2(attachToLeft ? -6f : 6f, 0f);
-        rect.sizeDelta = new Vector2(76f, 36f);
-
-        Image image = buttonObject.GetComponent<Image>();
-        image.color = color;
-
-        GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        textObject.transform.SetParent(buttonObject.transform, false);
-        Text text = textObject.GetComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.text = label;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
-        text.raycastTarget = false;
-        RectTransform textRect = text.rectTransform;
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-
-        return buttonObject.GetComponent<Button>();
     }
 
     private void UpdateDisassemblyOverlay()
     {
-        EnsureDisassemblyOverlay();
         ClearDisassemblyOverlay();
         if (combinationService == null || !combinationService.CanDisassemble(selectedItem)) return;
 
         ItemInstance itemToDisassemble = selectedItem;
         Color color = new Color(1f, 0.32f, 0.2f, 1f);
-        GameObject overlayObject = new GameObject("DisassemblyCandidate", typeof(RectTransform));
-        overlayObject.transform.SetParent(disassemblyOverlayContainer, false);
-        RectTransform overlayRect = overlayObject.GetComponent<RectTransform>();
+        InventoryActionOverlay overlay = GetActionOverlay(
+            disassemblyOverlayContainer,
+            disassemblyOverlays);
+        overlay.name = "DisassemblyCandidate";
+        RectTransform overlayRect = (RectTransform)overlay.transform;
         overlayRect.anchorMin = new Vector2(0f, 1f);
         overlayRect.anchorMax = new Vector2(0f, 1f);
         overlayRect.pivot = new Vector2(0f, 1f);
         overlayRect.anchoredPosition = new Vector2(itemToDisassemble.x * cellSize, -itemToDisassemble.y * cellSize);
         overlayRect.sizeDelta = new Vector2(itemToDisassemble.Width * cellSize, itemToDisassemble.Height * cellSize);
 
-        const float borderThickness = 4f;
-        CreateBorder(overlayRect, "Top", color, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(0f, borderThickness));
-        CreateBorder(overlayRect, "Bottom", color, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(0f, borderThickness));
-        CreateBorder(overlayRect, "Left", color, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(borderThickness, 0f));
-        CreateBorder(overlayRect, "Right", color, new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0f), new Vector2(borderThickness, 0f));
-
-        Button button = CreateAttachedActionButton(overlayRect, color, "Disassemble", "해체");
+        Button button = overlay.Configure(color, "해체");
         button.onClick.AddListener(() =>
         {
             if (combinationService.TryDisassemble(itemToDisassemble))
@@ -873,14 +793,11 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearDisassemblyOverlay()
     {
-        if (disassemblyOverlayContainer == null) return;
-        foreach (Transform child in disassemblyOverlayContainer)
-            Destroy(child.gameObject);
+        ReleaseOverlays(disassemblyOverlays);
     }
 
     private void UpdateDiscardOverlay()
     {
-        EnsureDiscardOverlay();
         ClearDiscardOverlay();
         if (selectedItem == null
             || selectedItem.data == null || !selectedItem.data.canDiscard
@@ -889,9 +806,11 @@ public class InventoryUI : MonoBehaviour
             return;
 
         ItemInstance itemToDiscard = selectedItem;
-        GameObject overlayObject = new GameObject("DiscardCandidate", typeof(RectTransform));
-        overlayObject.transform.SetParent(discardOverlayContainer, false);
-        RectTransform overlayRect = overlayObject.GetComponent<RectTransform>();
+        InventoryActionOverlay overlay = GetActionOverlay(
+            discardOverlayContainer,
+            discardOverlays);
+        overlay.name = "DiscardCandidate";
+        RectTransform overlayRect = (RectTransform)overlay.transform;
         overlayRect.anchorMin = new Vector2(0f, 1f);
         overlayRect.anchorMax = new Vector2(0f, 1f);
         overlayRect.pivot = new Vector2(0f, 1f);
@@ -902,12 +821,7 @@ public class InventoryUI : MonoBehaviour
             itemToDiscard.Width * cellSize,
             itemToDiscard.Height * cellSize);
 
-        Button button = CreateAttachedActionButton(
-            overlayRect,
-            discardColor,
-            "Discard",
-            "\uBC84\uB9AC\uAE30",
-            true);
+        Button button = overlay.Configure(discardColor, "버리기", attachToLeft: true, showBorder: false);
         button.onClick.AddListener(() =>
         {
             if (selectedItem != itemToDiscard || activeDragItem != null) return;
@@ -920,109 +834,7 @@ public class InventoryUI : MonoBehaviour
 
     private void ClearDiscardOverlay()
     {
-        if (discardOverlayContainer == null) return;
-        foreach (Transform child in discardOverlayContainer)
-            Destroy(child.gameObject);
-    }
-
-    private void EnsureCatalogUI()
-    {
-        RectTransform parent = invenUI.transform as RectTransform;
-        catalogButton = CreateActionButton(parent, "CatalogButton", "도감", new Vector2(-parent.rect.width + 210f, -parent.rect.height + 105f));
-
-        catalogPanel = new GameObject("CatalogPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        catalogPanel.transform.SetParent(parent, false);
-        RectTransform panelRect = catalogPanel.GetComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0f, 0.5f);
-        panelRect.anchorMax = new Vector2(0f, 0.5f);
-        panelRect.pivot = new Vector2(0f, 0.5f);
-        panelRect.anchoredPosition = new Vector2(30f, 0f);
-        panelRect.sizeDelta = new Vector2(430f, 560f);
-        catalogPanel.GetComponent<Image>().color = new Color(0.08f, 0.065f, 0.05f, 0.96f);
-
-        GameObject textObject = new GameObject("CatalogText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        textObject.transform.SetParent(catalogPanel.transform, false);
-        catalogText = textObject.GetComponent<Text>();
-        catalogText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        catalogText.fontSize = 22;
-        catalogText.alignment = TextAnchor.UpperLeft;
-        catalogText.color = Color.white;
-        catalogText.horizontalOverflow = HorizontalWrapMode.Wrap;
-        catalogText.verticalOverflow = VerticalWrapMode.Overflow;
-        RectTransform textRect = catalogText.rectTransform;
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(24f, 24f);
-        textRect.offsetMax = new Vector2(-24f, -24f);
-
-        catalogButton.onClick.AddListener(() => catalogPanel.SetActive(!catalogPanel.activeSelf));
-        catalogPanel.SetActive(false);
-    }
-
-    private void EnsureEquipmentUI()
-    {
-        if (equipmentSlotRect != null) return;
-
-        RectTransform parent = invenUI.transform as RectTransform;
-        GameObject slotObject = new GameObject(
-            "EquipmentSlot",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image),
-            typeof(Button));
-        slotObject.transform.SetParent(parent, false);
-
-        equipmentSlotRect = slotObject.GetComponent<RectTransform>();
-        equipmentSlotRect.anchorMin = Vector2.one;
-        equipmentSlotRect.anchorMax = Vector2.one;
-        equipmentSlotRect.pivot = Vector2.one;
-        equipmentSlotRect.anchoredPosition = new Vector2(-36f, -36f);
-        equipmentSlotRect.sizeDelta = new Vector2(cellSize * 1.5f, cellSize * 1.5f);
-
-        equipmentSlotImage = slotObject.GetComponent<Image>();
-        equipmentSlotImage.color = equipmentSlotColor;
-
-        GameObject iconObject = new GameObject(
-            "Icon",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image));
-        iconObject.transform.SetParent(slotObject.transform, false);
-        equipmentIconImage = iconObject.GetComponent<Image>();
-        equipmentIconImage.preserveAspect = true;
-        equipmentIconImage.raycastTarget = false;
-        RectTransform iconRect = equipmentIconImage.rectTransform;
-        iconRect.anchorMin = Vector2.zero;
-        iconRect.anchorMax = Vector2.one;
-        iconRect.offsetMin = new Vector2(10f, 28f);
-        iconRect.offsetMax = new Vector2(-10f, -10f);
-
-        GameObject labelObject = new GameObject(
-            "Label",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(TextMeshProUGUI));
-        labelObject.transform.SetParent(slotObject.transform, false);
-        equipmentLabel = labelObject.GetComponent<TextMeshProUGUI>();
-        if (itemViewPrefab != null && itemViewPrefab.DisplayFont != null)
-            equipmentLabel.font = itemViewPrefab.DisplayFont;
-        equipmentLabel.text = "장착";
-        equipmentLabel.alignment = TextAlignmentOptions.Center;
-        equipmentLabel.color = Color.white;
-        equipmentLabel.fontSize = 16f;
-        equipmentLabel.enableAutoSizing = true;
-        equipmentLabel.fontSizeMin = 10f;
-        equipmentLabel.fontSizeMax = 16f;
-        equipmentLabel.raycastTarget = false;
-        RectTransform labelRect = equipmentLabel.rectTransform;
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = new Vector2(1f, 0f);
-        labelRect.pivot = new Vector2(0.5f, 0f);
-        labelRect.anchoredPosition = Vector2.zero;
-        labelRect.sizeDelta = new Vector2(0f, 26f);
-
-        slotObject.GetComponent<Button>().onClick.AddListener(HandleEquipmentSlotClick);
-        UpdateEquipmentVisual();
+        ReleaseOverlays(discardOverlays);
     }
 
     private void HandleEquipmentSlotClick()
@@ -1088,6 +900,11 @@ public class InventoryUI : MonoBehaviour
             : equipmentSlotColor;
     }
 
+    private void ToggleCatalog()
+    {
+        catalogPanel.SetActive(!catalogPanel.activeSelf);
+    }
+
     private void UpdateCatalogText()
     {
         if (catalogText == null) return;
@@ -1112,38 +929,6 @@ public class InventoryUI : MonoBehaviour
         }
 
         catalogText.text = builder.ToString();
-    }
-
-    private static Button CreateActionButton(RectTransform parent, string objectName, string label, Vector2 position)
-    {
-        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        buttonObject.transform.SetParent(parent, false);
-
-        RectTransform rect = buttonObject.GetComponent<RectTransform>();
-        rect.anchorMin = Vector2.one;
-        rect.anchorMax = Vector2.one;
-        rect.pivot = Vector2.one;
-        rect.anchoredPosition = position;
-        rect.sizeDelta = new Vector2(180f, 48f);
-
-        Image image = buttonObject.GetComponent<Image>();
-        image.color = new Color(0.12f, 0.1f, 0.08f, 0.95f);
-
-        GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        textObject.transform.SetParent(buttonObject.transform, false);
-        Text text = textObject.GetComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.text = label;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
-        text.raycastTarget = false;
-        RectTransform textRect = text.rectTransform;
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-
-        return buttonObject.GetComponent<Button>();
     }
 
     private void UpdateActionButtons()

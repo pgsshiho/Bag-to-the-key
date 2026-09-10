@@ -53,6 +53,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2d507ed336a7534493c89938970cef4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventoryItemView
+  raycastImage: {fileID: 9211198358853110310}
+  iconImage: {fileID: 894761234036243885}
+  selectionOutline: {fileID: 4396184048632453922}
+  canvasGroup: {fileID: 4951932618466616498}
+  unknownRecipeText: {fileID: 5662346533425049968}
 --- !u!222 &6690111334401897422
 CanvasRenderer:
   m_ObjectHideFlags: 0

@@ -4,7 +4,7 @@ using UnityEngine.Events;
 
 public class PuzzleCompletionCondition : MonoBehaviour
 {
-    [SerializeField] private List<string> requiredPuzzleIds = new();
+    [SerializeField] private List<OnlyOneUnityString> requiredPuzzleIds = new();
     [SerializeField] private UnityEvent onConditionSatisfied;
 
     private bool conditionApplied;
@@ -15,7 +15,7 @@ public class PuzzleCompletionCondition : MonoBehaviour
         {
             if (requiredPuzzleIds.Count == 0) return false;
 
-            foreach (string puzzleId in requiredPuzzleIds)
+            foreach (OnlyOneUnityString puzzleId in requiredPuzzleIds)
             {
                 if (!GameProgressState.IsPuzzleCompleted(puzzleId))
                     return false;

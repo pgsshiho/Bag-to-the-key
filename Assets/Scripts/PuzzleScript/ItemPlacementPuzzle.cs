@@ -7,6 +7,7 @@ public class ItemPlacementPuzzle : MonoBehaviour
 {
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private bool requireSequence = true;
+    [SerializeField] private bool hidePlacedVisualsWhenCompleted;
     [SerializeField] private List<ItemPlacementSocket> sockets =
         new List<ItemPlacementSocket>();
     [SerializeField] private UnityEvent onWrongItem;
@@ -46,6 +47,12 @@ public class ItemPlacementPuzzle : MonoBehaviour
         {
             socket.ApplyFilledState();
             return true;
+        }
+
+        if (socket.ProgressId == null)
+        {
+            Debug.LogError($"{socket.name}: Progress ID가 지정되지 않았습니다.", socket);
+            return false;
         }
 
         if (requireSequence && socket.SequenceIndex != GetNextSequenceIndex())
@@ -92,10 +99,13 @@ public class ItemPlacementPuzzle : MonoBehaviour
     private void RefreshState()
     {
         ResolveSockets();
+        bool showPlacedVisuals = completion == null
+            || !completion.IsCompleted
+            || !hidePlacedVisualsWhenCompleted;
         foreach (ItemPlacementSocket socket in sockets)
         {
             if (socket != null)
-                socket.SetFilledState(IsSocketFilled(socket));
+                socket.SetFilledState(IsSocketFilled(socket), showPlacedVisuals);
         }
     }
 
@@ -125,10 +135,7 @@ public class ItemPlacementPuzzle : MonoBehaviour
 
     private string GetSocketStateId(ItemPlacementSocket socket)
     {
-        string socketId = !string.IsNullOrWhiteSpace(socket.SocketId)
-            ? socket.SocketId
-            : socket.name;
-        return $"{completion.PuzzleId}.socket.{socketId}";
+        return socket.ProgressId;
     }
 
     private void ResolveSockets()

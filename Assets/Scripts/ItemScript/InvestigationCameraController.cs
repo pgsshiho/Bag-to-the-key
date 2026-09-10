@@ -24,6 +24,19 @@ public class InvestigationCameraController : MonoBehaviour
     public bool IsInvestigating => activePoint != null;
     public bool IsTransitioning => brain != null && brain.IsBlending;
 
+    public bool IsFocusing(InvestigationPoint point)
+    {
+        return activePoint == point;
+    }
+
+    public bool CanInteractWithFocusedPoint(GameObject target)
+    {
+        if (!IsInvestigating || IsTransitioning || target == null)
+            return false;
+
+        return target.GetComponentInParent<InvestigationPoint>() == activePoint;
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)

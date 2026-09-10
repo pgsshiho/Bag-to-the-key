@@ -42,7 +42,6 @@ public class PointAndClickInteractor : MonoBehaviour
 
     private void Update()
     {
-        if (WorldInteractionGate.IsBlocked) return;
         if (!Input.GetMouseButtonDown(0)) return;
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
@@ -62,6 +61,13 @@ public class PointAndClickInteractor : MonoBehaviour
 
     private static bool TryInteract(GameObject target)
     {
+        if (WorldInteractionGate.IsBlocked
+            && (InvestigationCameraController.Instance == null
+                || !InvestigationCameraController.Instance.CanInteractWithFocusedPoint(target)))
+        {
+            return false;
+        }
+
         MonoBehaviour[] behaviours = target.GetComponentsInParent<MonoBehaviour>(true);
         foreach (MonoBehaviour behaviour in behaviours)
         {

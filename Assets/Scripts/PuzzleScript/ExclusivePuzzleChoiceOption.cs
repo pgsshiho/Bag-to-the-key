@@ -5,8 +5,7 @@ using UnityEngine.Events;
 public class ExclusivePuzzleChoiceOption : MonoBehaviour, IWorldInteractable
 {
     [SerializeField] private ExclusivePuzzleChoice choice;
-    [SerializeField] private string optionId;
-    [SerializeField] private string outcomeId;
+    [SerializeField] private OnlyOneUnityString outcomeId;
     [SerializeField] private int moralityDelta;
     [SerializeField] private ItemData requiredEquippedItem;
     [SerializeField] private bool consumeRequiredItem = true;
@@ -26,6 +25,7 @@ public class ExclusivePuzzleChoiceOption : MonoBehaviour, IWorldInteractable
     public ItemData RequiredEquippedItem => requiredEquippedItem;
     public bool ConsumeRequiredItem => consumeRequiredItem;
     public IReadOnlyList<ItemData> RewardItems => rewardItems;
+    public OnlyOneUnityString OutcomeId => outcomeId;
 
     private void Awake()
     {
@@ -38,17 +38,6 @@ public class ExclusivePuzzleChoiceOption : MonoBehaviour, IWorldInteractable
         if (choice == null)
             choice = GetComponentInParent<ExclusivePuzzleChoice>();
         choice?.TryChoose(this);
-    }
-
-    public string ResolveOutcomeId(string choicePuzzleId)
-    {
-        if (!string.IsNullOrWhiteSpace(outcomeId))
-            return outcomeId;
-
-        string resolvedOptionId = !string.IsNullOrWhiteSpace(optionId)
-            ? optionId
-            : name;
-        return $"{choicePuzzleId}.choice.{resolvedOptionId}";
     }
 
     public void SetChoiceState(ExclusivePuzzleChoiceOption selected)

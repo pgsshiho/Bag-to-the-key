@@ -12,12 +12,23 @@ public class SaveLoadManager : MonoBehaviour
 
     private static SaveLoadManager instance;
 
-    [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private ItemDatabase itemDatabase;
-    [SerializeField] private Camera targetCamera;
-    [SerializeField, Range(1, ManualSlotCount)] private int selectedManualSlot = 1;
-    [SerializeField, Min(0f)] private float autoSaveDelay = 0.75f;
-    [SerializeField] private string[] autoSaveExcludedScenes = { "Mainmenu" };
+    [SerializeField]
+    private InventoryManager inventoryManager;
+
+    [SerializeField]
+    private ItemDatabase itemDatabase;
+
+    [SerializeField]
+    private Camera targetCamera;
+
+    [SerializeField, Range(1, ManualSlotCount)]
+    private int selectedManualSlot = 1;
+
+    [SerializeField, Min(0f)]
+    private float autoSaveDelay = 0.75f;
+
+    [SerializeField]
+    private string[] autoSaveExcludedScenes = { "Mainmenu" };
 
     private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
     private Coroutine pendingAutoSave;
@@ -42,7 +53,8 @@ public class SaveLoadManager : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
-        if (targetCamera == null) targetCamera = Camera.main;
+        if (targetCamera == null)
+            targetCamera = Camera.main;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -53,10 +65,12 @@ public class SaveLoadManager : MonoBehaviour
 
     public static SaveLoadManager GetOrCreate()
     {
-        if (instance != null) return instance;
+        if (instance != null)
+            return instance;
 
         SaveLoadManager existing = FindAnyObjectByType<SaveLoadManager>();
-        if (existing != null) return existing;
+        if (existing != null)
+            return existing;
 
         GameObject managerObject = new GameObject(nameof(SaveLoadManager));
         return managerObject.AddComponent<SaveLoadManager>();
@@ -83,8 +97,10 @@ public class SaveLoadManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F5)) OpenSaveMenu();
-        if (Input.GetKeyDown(KeyCode.F9)) OpenLoadMenu();
+        if (Input.GetKeyDown(KeyCode.F5))
+            OpenSaveMenu();
+        if (Input.GetKeyDown(KeyCode.F9))
+            OpenLoadMenu();
     }
 
     public void OpenSaveMenu()
@@ -138,10 +154,11 @@ public class SaveLoadManager : MonoBehaviour
             slotNumber = slotNumber,
             isAutoSave = isAutoSave,
             savedAtUtc = DateTime.UtcNow.ToString("O"),
-            sceneName = SceneManager.GetActiveScene().name
+            sceneName = SceneManager.GetActiveScene().name,
         };
 
-        if (targetCamera == null) targetCamera = Camera.main;
+        if (targetCamera == null)
+            targetCamera = Camera.main;
         if (targetCamera != null)
         {
             data.cameraPosition = new Vector3Data(targetCamera.transform.position);
@@ -194,9 +211,7 @@ public class SaveLoadManager : MonoBehaviour
 
         selectedManualSlot = slotNumber;
         string path = GetManualSavePath(slotNumber);
-        if (!SaveFileExists(path)
-            && slotNumber == 1
-            && SaveFileExists(LegacySavePath))
+        if (!SaveFileExists(path) && slotNumber == 1 && SaveFileExists(LegacySavePath))
             path = LegacySavePath;
 
         LoadGameFromPath(path);
@@ -213,9 +228,7 @@ public class SaveLoadManager : MonoBehaviour
         for (int slotNumber = 1; slotNumber <= ManualSlotCount; slotNumber++)
         {
             string path = GetManualSavePath(slotNumber);
-            if (!SaveFileExists(path)
-                && slotNumber == 1
-                && SaveFileExists(LegacySavePath))
+            if (!SaveFileExists(path) && slotNumber == 1 && SaveFileExists(LegacySavePath))
                 path = LegacySavePath;
 
             slots[slotNumber - 1] = ReadSlotInfo(path, slotNumber, false);
@@ -227,7 +240,8 @@ public class SaveLoadManager : MonoBehaviour
 
     public bool HasManualSave(int slotNumber)
     {
-        if (!IsValidManualSlot(slotNumber)) return false;
+        if (!IsValidManualSlot(slotNumber))
+            return false;
         return SaveFileExists(GetManualSavePath(slotNumber))
             || (slotNumber == 1 && SaveFileExists(LegacySavePath));
     }
@@ -266,15 +280,12 @@ public class SaveLoadManager : MonoBehaviour
     {
         if (SceneManager.GetActiveScene().name != data.sceneName)
         {
-            yield return SceneTransitionService
-                .GetOrCreate()
-                .LoadSceneAndWait(data.sceneName);
+            yield return SceneTransitionService.GetOrCreate().LoadSceneAndWait(data.sceneName);
             yield return null;
 
             if (SceneManager.GetActiveScene().name != data.sceneName)
             {
-                Debug.LogWarning(
-                    $"저장된 장면으로 이동하지 못했습니다: {data.sceneName}");
+                Debug.LogWarning($"저장된 장면으로 이동하지 못했습니다: {data.sceneName}");
                 isLoading = false;
                 yield break;
             }
@@ -293,7 +304,8 @@ public class SaveLoadManager : MonoBehaviour
         GameProgressState.Restore(
             data.moralityBalance,
             data.completedPuzzleIds,
-            data.recordedOutcomeIds);
+            data.recordedOutcomeIds
+        );
 
         if (inventoryManager == null)
         {
@@ -321,7 +333,8 @@ public class SaveLoadManager : MonoBehaviour
                 savedItem.y,
                 savedItem.rotated,
                 savedItem.createdByRecipeId,
-                savedItem.createdByRecipeRotation);
+                savedItem.createdByRecipeRotation
+            );
         }
 
         if (data.equippedItem != null)
@@ -333,18 +346,23 @@ public class SaveLoadManager : MonoBehaviour
                     equippedItemData,
                     data.equippedItem.rotated,
                     data.equippedItem.createdByRecipeId,
-                    data.equippedItem.createdByRecipeRotation);
+                    data.equippedItem.createdByRecipeRotation
+                );
             }
             else
             {
                 Debug.LogWarning(
-                    $"장착 아이템의 ItemData를 찾을 수 없습니다: {data.equippedItem.itemId}");
+                    $"장착 아이템의 ItemData를 찾을 수 없습니다: {data.equippedItem.itemId}"
+                );
             }
         }
 
-        DiscoveryManager.GetOrCreate().Restore(
-            data.discoveredItemIds ?? new List<string>(),
-            data.discoveredRecipeIds ?? new List<string>());
+        DiscoveryManager
+            .GetOrCreate()
+            .Restore(
+                data.discoveredItemIds ?? new List<string>(),
+                data.discoveredRecipeIds ?? new List<string>()
+            );
         isLoading = false;
         Debug.Log("로드 완료");
     }
@@ -365,7 +383,8 @@ public class SaveLoadManager : MonoBehaviour
 
     private void SubscribeToInventory(InventoryManager manager)
     {
-        if (subscribedInventoryManager == manager) return;
+        if (subscribedInventoryManager == manager)
+            return;
 
         if (subscribedInventoryManager != null)
             subscribedInventoryManager.OnInventoryChanged -= ScheduleAutoSave;
@@ -377,8 +396,11 @@ public class SaveLoadManager : MonoBehaviour
 
     private void ScheduleAutoSave()
     {
-        if (isLoading || inventoryManager == null
-            || IsAutoSaveExcludedScene(SceneManager.GetActiveScene().name))
+        if (
+            isLoading
+            || inventoryManager == null
+            || IsAutoSaveExcludedScene(SceneManager.GetActiveScene().name)
+        )
             return;
 
         CancelPendingAutoSave();
@@ -396,7 +418,8 @@ public class SaveLoadManager : MonoBehaviour
 
     private void CancelPendingAutoSave()
     {
-        if (pendingAutoSave == null) return;
+        if (pendingAutoSave == null)
+            return;
         StopCoroutine(pendingAutoSave);
         pendingAutoSave = null;
     }
@@ -407,7 +430,7 @@ public class SaveLoadManager : MonoBehaviour
         {
             slotNumber = slotNumber,
             isAutoSave = isAutoSave,
-            exists = SaveFileExists(path)
+            exists = SaveFileExists(path),
         };
 
         if (!info.exists || !TryReadSaveData(path, out SaveData data))
@@ -417,8 +440,8 @@ public class SaveLoadManager : MonoBehaviour
         info.savedAtUtc = data.savedAtUtc;
         info.sceneName = data.sceneName;
         info.moralityBalance = data.moralityBalance;
-        info.inventoryItemCount = (data.inventoryItems?.Count ?? 0)
-            + (data.equippedItem != null ? 1 : 0);
+        info.inventoryItemCount =
+            (data.inventoryItems?.Count ?? 0) + (data.equippedItem != null ? 1 : 0);
         return info;
     }
 
@@ -431,7 +454,7 @@ public class SaveLoadManager : MonoBehaviour
             y = item.y,
             rotated = item.rotated,
             createdByRecipeId = item.createdByRecipeId,
-            createdByRecipeRotation = item.createdByRecipeRotation
+            createdByRecipeRotation = item.createdByRecipeRotation,
         };
     }
 
@@ -441,8 +464,7 @@ public class SaveLoadManager : MonoBehaviour
             return true;
 
         string backupPath = GetBackupPath(path);
-        if (!File.Exists(backupPath)
-            || !TryReadSaveDataFile(backupPath, out data))
+        if (!File.Exists(backupPath) || !TryReadSaveDataFile(backupPath, out data))
         {
             return false;
         }
@@ -454,7 +476,8 @@ public class SaveLoadManager : MonoBehaviour
     private static bool TryReadSaveDataFile(string path, out SaveData data)
     {
         data = null;
-        if (!File.Exists(path)) return false;
+        if (!File.Exists(path))
+            return false;
 
         try
         {
@@ -466,8 +489,8 @@ public class SaveLoadManager : MonoBehaviour
             if (data.formatVersion > SaveData.CurrentFormatVersion)
             {
                 Debug.LogWarning(
-                    $"현재 게임보다 새로운 저장 형식입니다: "
-                    + $"{data.formatVersion}");
+                    $"현재 게임보다 새로운 저장 형식입니다: " + $"{data.formatVersion}"
+                );
                 data = null;
                 return false;
             }
@@ -501,17 +524,11 @@ public class SaveLoadManager : MonoBehaviour
             }
             catch (PlatformNotSupportedException)
             {
-                ReplaceSaveFileWithFallback(
-                    temporaryPath,
-                    path,
-                    backupPath);
+                ReplaceSaveFileWithFallback(temporaryPath, path, backupPath);
             }
             catch (IOException)
             {
-                ReplaceSaveFileWithFallback(
-                    temporaryPath,
-                    path,
-                    backupPath);
+                ReplaceSaveFileWithFallback(temporaryPath, path, backupPath);
             }
         }
         finally
@@ -524,7 +541,8 @@ public class SaveLoadManager : MonoBehaviour
     private static void ReplaceSaveFileWithFallback(
         string temporaryPath,
         string path,
-        string backupPath)
+        string backupPath
+    )
     {
         File.Copy(path, backupPath, true);
         File.Copy(temporaryPath, path, true);
@@ -548,7 +566,8 @@ public class SaveLoadManager : MonoBehaviour
 
     private bool IsAutoSaveExcludedScene(string sceneName)
     {
-        if (autoSaveExcludedScenes == null) return false;
+        if (autoSaveExcludedScenes == null)
+            return false;
 
         foreach (string excludedScene in autoSaveExcludedScenes)
         {
@@ -569,12 +588,14 @@ public class SaveLoadManager : MonoBehaviour
         if (itemDatabase != null)
         {
             ItemData databaseItem = itemDatabase.GetItemById(itemId);
-            if (databaseItem != null) return databaseItem;
+            if (databaseItem != null)
+                return databaseItem;
         }
 
         foreach (ItemData item in Resources.LoadAll<ItemData>(string.Empty))
         {
-            if (item.itemId == itemId) return item;
+            if (item.itemId == itemId)
+                return item;
         }
 
         return null;

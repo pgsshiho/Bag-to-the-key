@@ -20,10 +20,20 @@ public static class GameProgressState
             && completedPuzzleIds.Contains(puzzleId);
     }
 
+    public static bool IsPuzzleCompleted(OnlyOneUnityString puzzleId)
+    {
+        return puzzleId != null && IsPuzzleCompleted(puzzleId.Value);
+    }
+
     public static bool HasOutcome(string outcomeId)
     {
         return !string.IsNullOrWhiteSpace(outcomeId)
             && recordedOutcomeIds.Contains(outcomeId);
+    }
+
+    public static bool HasOutcome(OnlyOneUnityString outcomeId)
+    {
+        return outcomeId != null && HasOutcome(outcomeId.Value);
     }
 
     public static bool CompletePuzzle(string puzzleId)
@@ -33,6 +43,11 @@ public static class GameProgressState
 
         ProgressChanged?.Invoke();
         return true;
+    }
+
+    public static bool CompletePuzzle(OnlyOneUnityString puzzleId)
+    {
+        return puzzleId != null && CompletePuzzle(puzzleId.Value);
     }
 
     public static bool RecordOutcome(
@@ -54,6 +69,16 @@ public static class GameProgressState
         MoralityChanged?.Invoke(MoralityBalance);
         ProgressChanged?.Invoke();
         return true;
+    }
+
+    public static bool RecordOutcome(
+        OnlyOneUnityString puzzleId,
+        OnlyOneUnityString outcomeId,
+        int moralityDelta)
+    {
+        return puzzleId != null
+            && outcomeId != null
+            && RecordOutcome(puzzleId.Value, outcomeId.Value, moralityDelta);
     }
 
     public static void Restore(

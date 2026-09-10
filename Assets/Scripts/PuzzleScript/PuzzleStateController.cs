@@ -3,13 +3,19 @@ using UnityEngine.Events;
 
 public class PuzzleStateController : MonoBehaviour
 {
-    [SerializeField] private string puzzleId;
-    [SerializeField] private UnityEvent onCompletedStateApplied;
-    [SerializeField] private UnityEvent onFirstCompleted;
+    [SerializeField]
+    private OnlyOneUnityString puzzleId;
+
+    [SerializeField]
+    private UnityEvent onCompletedStateApplied;
+
+    [SerializeField]
+    private UnityEvent onFirstCompleted;
 
     private bool completedStateApplied;
 
     public string PuzzleId => puzzleId;
+    public OnlyOneUnityString PuzzleIdAsset => puzzleId;
     public bool IsCompleted => GameProgressState.IsPuzzleCompleted(puzzleId);
 
     private void OnEnable()
@@ -30,7 +36,7 @@ public class PuzzleStateController : MonoBehaviour
 
     public bool Complete()
     {
-        if (string.IsNullOrWhiteSpace(puzzleId))
+        if (puzzleId == null)
         {
             Debug.LogWarning($"{name}: Puzzle ID가 지정되지 않았습니다.", this);
             return false;
@@ -51,7 +57,8 @@ public class PuzzleStateController : MonoBehaviour
             return;
         }
 
-        if (completedStateApplied) return;
+        if (completedStateApplied)
+            return;
         completedStateApplied = true;
         onCompletedStateApplied?.Invoke();
     }

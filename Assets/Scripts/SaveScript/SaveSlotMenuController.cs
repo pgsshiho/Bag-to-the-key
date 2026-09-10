@@ -15,16 +15,18 @@ public class SaveSlotMenuController : MonoBehaviour
 {
     private static SaveSlotMenuController instance;
 
-    private readonly List<Button> manualSlotButtons = new List<Button>();
-    private readonly List<TMP_Text> manualSlotLabels = new List<TMP_Text>();
+    [SerializeField] private List<Button> manualSlotButtons = new List<Button>();
+    [SerializeField] private List<TMP_Text> manualSlotLabels = new List<TMP_Text>();
+
+    [SerializeField] private Button closeButton;
 
     private SaveLoadManager saveLoadManager;
     private SaveSlotMenuMode mode;
-    private Canvas canvas;
-    private GameObject panel;
-    private TMP_Text title;
-    private Button autoSaveButton;
-    private TMP_Text autoSaveLabel;
+    [SerializeField] private Canvas canvas;
+    [SerializeField] private GameObject panel;
+    [SerializeField] private TMP_Text title;
+    [SerializeField] private Button autoSaveButton;
+    [SerializeField] private TMP_Text autoSaveLabel;
 
     public static SaveSlotMenuController GetOrCreate()
     {
@@ -33,13 +35,10 @@ public class SaveSlotMenuController : MonoBehaviour
         SaveSlotMenuController existing = FindAnyObjectByType<SaveSlotMenuController>();
         if (existing != null) return existing;
 
-        GameObject root = new GameObject(
-            nameof(SaveSlotMenuController),
-            typeof(RectTransform),
-            typeof(Canvas),
-            typeof(CanvasScaler),
-            typeof(GraphicRaycaster));
-        return root.AddComponent<SaveSlotMenuController>();
+        SaveSlotMenuController prefab = Resources.Load<SaveSlotMenuController>("UI/SaveSlotMenuController");
+        if (prefab == null)
+            throw new InvalidOperationException("Missing authored UI prefab: Resources/UI/SaveSlotMenuController");
+        return Instantiate(prefab);
     }
 
     private void Awake()
@@ -52,7 +51,7 @@ public class SaveSlotMenuController : MonoBehaviour
 
         instance = this;
         DontDestroyOnLoad(gameObject);
-        BuildUi();
+        closeButton.onClick.AddListener(Hide);
         EnsureEventSystem();
         Hide();
     }
@@ -141,144 +140,6 @@ public class SaveSlotMenuController : MonoBehaviour
             saveLoadManager.LoadAutoSave();
             Hide();
         });
-    }
-
-    private void BuildUi()
-    {
-        canvas = GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 5000;
-
-        CanvasScaler scaler = GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        panel = CreateUiObject("SaveSlotPanel", transform, typeof(Image));
-        RectTransform panelRect = panel.GetComponent<RectTransform>();
-        Stretch(panelRect);
-        panel.GetComponent<Image>().color = new Color(0.025f, 0.025f, 0.03f, 0.94f);
-
-        GameObject content = CreateUiObject("Content", panel.transform, typeof(Image));
-        RectTransform contentRect = content.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0.5f, 0.5f);
-        contentRect.anchorMax = new Vector2(0.5f, 0.5f);
-        contentRect.pivot = new Vector2(0.5f, 0.5f);
-        contentRect.sizeDelta = new Vector2(760f, 720f);
-        contentRect.anchoredPosition = Vector2.zero;
-        content.GetComponent<Image>().color = new Color(0.09f, 0.09f, 0.105f, 1f);
-
-        title = CreateText("Title", content.transform, 38, TextAlignmentOptions.Center);
-        RectTransform titleRect = title.rectTransform;
-        titleRect.anchorMin = new Vector2(0f, 1f);
-        titleRect.anchorMax = new Vector2(1f, 1f);
-        titleRect.pivot = new Vector2(0.5f, 1f);
-        titleRect.anchoredPosition = new Vector2(0f, -34f);
-        titleRect.sizeDelta = new Vector2(-160f, 64f);
-
-        Button closeButton = CreateButton("Close", content.transform, "X", out _);
-        RectTransform closeRect = closeButton.GetComponent<RectTransform>();
-        closeRect.anchorMin = new Vector2(1f, 1f);
-        closeRect.anchorMax = new Vector2(1f, 1f);
-        closeRect.pivot = new Vector2(1f, 1f);
-        closeRect.anchoredPosition = new Vector2(-24f, -24f);
-        closeRect.sizeDelta = new Vector2(56f, 56f);
-        closeButton.onClick.AddListener(Hide);
-
-        const float firstRowY = -124f;
-        const float rowSpacing = 88f;
-        for (int i = 0; i < SaveLoadManager.ManualSlotCount; i++)
-        {
-            Button button = CreateButton(
-                $"ManualSlot{i + 1}",
-                content.transform,
-                string.Empty,
-                out TMP_Text label);
-            PositionRow(button.GetComponent<RectTransform>(), firstRowY - i * rowSpacing);
-            manualSlotButtons.Add(button);
-            manualSlotLabels.Add(label);
-        }
-
-        autoSaveButton = CreateButton(
-            "AutoSaveSlot",
-            content.transform,
-            string.Empty,
-            out autoSaveLabel);
-        PositionRow(
-            autoSaveButton.GetComponent<RectTransform>(),
-            firstRowY - SaveLoadManager.ManualSlotCount * rowSpacing);
-    }
-
-    private static Button CreateButton(
-        string objectName,
-        Transform parent,
-        string labelText,
-        out TMP_Text label)
-    {
-        GameObject buttonObject = CreateUiObject(objectName, parent, typeof(Image), typeof(Button));
-        Image image = buttonObject.GetComponent<Image>();
-        image.color = new Color(0.17f, 0.17f, 0.2f, 1f);
-
-        Button button = buttonObject.GetComponent<Button>();
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(0.86f, 0.86f, 0.9f, 1f);
-        colors.pressedColor = new Color(0.68f, 0.68f, 0.74f, 1f);
-        colors.disabledColor = new Color(0.42f, 0.42f, 0.45f, 0.55f);
-        colors.colorMultiplier = 1f;
-        button.colors = colors;
-
-        label = CreateText("Label", buttonObject.transform, 25, TextAlignmentOptions.MidlineLeft);
-        label.text = labelText;
-        label.margin = new Vector4(28f, 0f, 28f, 0f);
-        Stretch(label.rectTransform);
-        return button;
-    }
-
-    private static TMP_Text CreateText(
-        string objectName,
-        Transform parent,
-        float fontSize,
-        TextAlignmentOptions alignment)
-    {
-        GameObject textObject = CreateUiObject(objectName, parent, typeof(TextMeshProUGUI));
-        TMP_Text text = textObject.GetComponent<TMP_Text>();
-        text.fontSize = fontSize;
-        text.alignment = alignment;
-        text.color = new Color(0.94f, 0.94f, 0.96f, 1f);
-        text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Ellipsis;
-        return text;
-    }
-
-    private static GameObject CreateUiObject(
-        string objectName,
-        Transform parent,
-        params Type[] components)
-    {
-        GameObject gameObject = new GameObject(objectName, typeof(RectTransform));
-        foreach (Type component in components)
-            gameObject.AddComponent(component);
-
-        gameObject.transform.SetParent(parent, false);
-        return gameObject;
-    }
-
-    private static void PositionRow(RectTransform rect, float y)
-    {
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, y);
-        rect.sizeDelta = new Vector2(660f, 68f);
-    }
-
-    private static void Stretch(RectTransform rect)
-    {
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
     }
 
     private static string FormatSlotLabel(string prefix, SaveSlotInfo info)

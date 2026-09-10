@@ -9,11 +9,12 @@ public class ChapterOneStateView : MonoBehaviour
     public class Binding
     {
         public GameObject target;
-        public string[] required = Array.Empty<string>();
-        public string[] excluded = Array.Empty<string>();
+        public OnlyOneUnityString[] required = Array.Empty<OnlyOneUnityString>();
+        public OnlyOneUnityString[] excluded = Array.Empty<OnlyOneUnityString>();
     }
 
-    [SerializeField] private List<Binding> bindings = new List<Binding>();
+    [SerializeField]
+    private List<Binding> bindings = new List<Binding>();
 
     private void OnEnable()
     {
@@ -22,17 +23,19 @@ public class ChapterOneStateView : MonoBehaviour
     }
 
     private void Start() => Refresh();
+
     private void OnDisable() => GameProgressState.ProgressChanged -= Refresh;
 
     public void Refresh()
     {
         foreach (Binding binding in bindings)
         {
-            if (binding.target == null) continue;
+            if (binding.target == null)
+                continue;
             bool visible = true;
-            foreach (string id in binding.required)
+            foreach (OnlyOneUnityString id in binding.required)
                 visible &= GameProgressState.IsPuzzleCompleted(id);
-            foreach (string id in binding.excluded)
+            foreach (OnlyOneUnityString id in binding.excluded)
                 visible &= !GameProgressState.IsPuzzleCompleted(id);
             if (binding.target.activeSelf != visible)
                 binding.target.SetActive(visible);
