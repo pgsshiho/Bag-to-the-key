@@ -316,8 +316,7 @@ public static class ChapterOneSceneBuilder
         Set(code, "expectedCode", "2413");
         EventText(code, "onCorrectCode", "찰칵! 곰인형과 첫 번째 길 조각이 들어 있구나.");
         EventText(code, "onAlreadyUnlocked", "상자는 열려 있어. 옆에 남아 있는 물건을 챙기렴.");
-        Bind(chest, new[] { ChapterOneProgressIds.Box });
-        Pickup("RabbitDoll", wall, 5,-2.8f,14.1f,1.7f,3,new[] { ChapterOneProgressIds.Box });
+        Pickup("RabbitDoll", wall, 5,-2.8f,14.1f,1.7f,3);
         Pickup("BearDoll", wall, 1,-1.5f,14,1.5f,2.5f,new[] { ChapterOneProgressIds.Chest });
         Pickup("PathPieceA", wall, 3.1f,-1.7f,13.8f,1.3f,1.3f,new[] { ChapterOneProgressIds.Chest });
 
@@ -495,6 +494,17 @@ public static class ChapterOneSceneBuilder
         GameObject machine = Visual("BallTrackMachine",wall,LoadSprite("공굴리기"),0,0,14.7f,11,10,true);
         machine.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
         MultiStepItemUsePuzzle install = machine.AddComponent<MultiStepItemUsePuzzle>();
+        InvestigationPoint investigationPoint = machine.AddComponent<InvestigationPoint>();
+        Transform investigationViewPoint = Node(
+            "InvestigationViewPoint",
+            machine.transform,
+            new Vector3(0f, .3f, -2.9f)).transform;
+        Set(investigationPoint, "viewPoint", investigationViewPoint);
+        Set(investigationPoint, "fieldOfView", 30f);
+        Set(
+            investigationPoint,
+            "cameraController",
+            Object.FindAnyObjectByType<InvestigationCameraController>());
         Set(install.GetComponent<PuzzleStateController>(),"puzzleId",ChapterOneProgressIds.TrackInstalled);
         Set(install,"inventoryManager",inventory);
         var step = new ItemUsePuzzleStep

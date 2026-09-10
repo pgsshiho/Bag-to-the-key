@@ -75,6 +75,15 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
             return;
         }
 
+        // Focus this investigation point first. Once this point is focused,
+        // subsequent interactions continue with the configured puzzle step.
+        InvestigationPoint investigationPoint = GetComponent<InvestigationPoint>();
+        if (investigationPoint != null && !investigationPoint.IsFocused)
+        {
+            investigationPoint.Interact();
+            return;
+        }
+
         ResolveInventory();
         if (inventoryManager == null)
         {
@@ -100,6 +109,12 @@ public class MultiStepItemUsePuzzle : MonoBehaviour, IWorldInteractable
         )
         {
             step.onInventoryFull?.Invoke();
+            return;
+        }
+
+        if (investigationPoint != null && !investigationPoint.ReturnToDefault())
+        {
+            RollbackRewards(addedItems);
             return;
         }
 

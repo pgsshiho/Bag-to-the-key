@@ -8,6 +8,12 @@ public class InvestigationPoint : MonoBehaviour, IWorldInteractable
 
     public Transform ViewPoint => viewPoint;
     public float FieldOfView => fieldOfView;
+    public bool IsFocused => cameraController != null && cameraController.IsFocusing(this);
+
+    public bool ReturnToDefault()
+    {
+        return cameraController != null && cameraController.ReturnToDefault();
+    }
 
     private void Awake()
     {
