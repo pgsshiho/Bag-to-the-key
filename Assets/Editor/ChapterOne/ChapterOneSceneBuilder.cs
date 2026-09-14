@@ -20,20 +20,21 @@ public static class ChapterOneSceneBuilder
     public const string ScenePath = "Assets/Scenes/FirstScene/FirstMap.unity";
     private const string Art = "Assets/Sprites/RoomSprite/FirstRoom/";
     private const string Items = "Assets/Inventory/Resources/Items/Chapter01/";
+    private const string GeneratedArt = "Assets/Sprites/ChapterOneFinal/";
     private const string PlaceholderPath = "Assets/Sprites/ChapterOnePlaceholders/";
-    private const string SpriteTextureMixMaterialPath =
-        "Assets/Materials/SpriteTextureMix.mat";
+    private const string SpriteTextureMixMaterialPath = "Assets/Materials/SpriteTextureMix.mat";
     private static TMP_FontAsset font;
     private static Material spriteMaterial;
     private static Sprite square;
     private static InventoryManager inventory;
     private static ChapterOnePresentation presentation;
-    private static readonly List<ChapterOneStateView.Binding> bindings = new();
+    private static readonly List<ProgressConditionObjectBinding.Binding> bindings = new();
 
     [MenuItem("Tools/Bag to the key/Apply Chapter 1 to FirstMap")]
     public static void Apply()
     {
-        if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play Mode before authoring.");
+        if (EditorApplication.isPlaying)
+            throw new InvalidOperationException("Exit Play Mode before authoring.");
         Scene scene = SceneManager.GetActiveScene();
         if (scene.path != ScenePath)
             throw new InvalidOperationException("Open FirstMap before applying Chapter 1.");
@@ -41,26 +42,53 @@ public static class ChapterOneSceneBuilder
         // Preserve a reviewable snapshot including any unsaved user changes.
         Directory.CreateDirectory("Temp/ChapterOneBackup");
         if (!File.Exists("Temp/ChapterOneBackup/FirstMap.before-chapter1.unity"))
-            EditorSceneManager.SaveScene(scene, "Temp/ChapterOneBackup/FirstMap.before-chapter1.unity", true);
+            EditorSceneManager.SaveScene(
+                scene,
+                "Temp/ChapterOneBackup/FirstMap.before-chapter1.unity",
+                true
+            );
         GameObject previous = scene.GetRootGameObjects().FirstOrDefault(g => g.name == "Chapter01");
-        if (previous != null) Object.DestroyImmediate(previous);
+        if (previous != null)
+            Object.DestroyImmediate(previous);
         bindings.Clear();
-        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Font/GriunXHangeul_Equal-Rg SDF.asset");
-        if (font == null) throw new InvalidOperationException("Korean UI font missing.");
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+            "Assets/Font/GriunXHangeul_Equal-Rg SDF.asset"
+        );
+        if (font == null)
+            throw new InvalidOperationException("Korean UI font missing.");
         font.isMultiAtlasTexturesEnabled = true;
         EditorUtility.SetDirty(font);
         spriteMaterial = AssetDatabase.LoadAssetAtPath<Material>(
-            AssetDatabase.GUIDToAssetPath("a97c105638bdf8b4a8650670310a4cd3"));
-        square = AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(
-            "311925a002f4447b3a28927169b83ea6")).OfType<Sprite>().FirstOrDefault();
-        if (square == null) square = MakeIcon("Panel", 0, new Color(.8f, .65f, .48f));
+            AssetDatabase.GUIDToAssetPath("a97c105638bdf8b4a8650670310a4cd3")
+        );
+        square = AssetDatabase
+            .LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath("311925a002f4447b3a28927169b83ea6"))
+            .OfType<Sprite>()
+            .FirstOrDefault();
+        if (square == null)
+            square = MakeIcon("Panel", 0, new Color(.8f, .65f, .48f));
         inventory = Object.FindAnyObjectByType<InventoryManager>();
-        if (inventory == null) throw new InvalidOperationException("Existing inventory missing.");
+        if (inventory == null)
+            throw new InvalidOperationException("Existing inventory missing.");
 
-        foreach (string name in new[] { "Items", "InvestPoint", "DialogueInteractor", "InventorySettingTestOnly", "Canvas", "Square", "Square (1)", "Square (3)", "Square (4)" })
+        foreach (
+            string name in new[]
+            {
+                "Items",
+                "InvestPoint",
+                "DialogueInteractor",
+                "InventorySettingTestOnly",
+                "Canvas",
+                "Square",
+                "Square (1)",
+                "Square (3)",
+                "Square (4)",
+            }
+        )
         {
             GameObject legacy = scene.GetRootGameObjects().FirstOrDefault(g => g.name == name);
-            if (legacy != null) legacy.SetActive(false);
+            if (legacy != null)
+                legacy.SetActive(false);
         }
 
         GameObject root = new GameObject("Chapter01");
@@ -72,19 +100,28 @@ public static class ChapterOneSceneBuilder
         Set(presentation, "booksCompletedId", ChapterOneProgressIds.Books);
         Set(presentation, "chestCompletedId", ChapterOneProgressIds.Chest);
         Set(presentation, "boxCompletedId", ChapterOneProgressIds.Box);
-        ChapterOneStateView stateView = root.AddComponent<ChapterOneStateView>();
+        ProgressConditionObjectBinding stateView =
+            root.AddComponent<ProgressConditionObjectBinding>();
         Transform[] walls = new Transform[4];
-        string[] wallNames = { "01_Entry", "02_BoxAndHole", "03_DollTableAndBooks", "04_BallTrack" };
+        string[] wallNames =
+        {
+            "01_Entry",
+            "02_BoxAndHole",
+            "03_DollTableAndBooks",
+            "04_BallTrack",
+        };
         for (int i = 0; i < 4; i++)
         {
             walls[i] = Node(wallNames[i], root.transform, Vector3.zero).transform;
             walls[i].localRotation = Quaternion.Euler(0f, i * 90f, 0f);
             Visual("Wallpaper", walls[i], LoadSprite("벽지 1"), 0, 0, 16, 32, 21);
-            SpriteRenderer floor = Visual("Floor", walls[i], square, 0, -7.4f, 16, 32, 4).GetComponent<SpriteRenderer>();
-            floor.color = new Color(.40f,.29f,.24f);
+            SpriteRenderer floor = Visual("Floor", walls[i], square, 0, -7.4f, 16, 32, 4)
+                .GetComponent<SpriteRenderer>();
+            floor.color = new Color(.40f, .29f, .24f);
             floor.sortingOrder = 20;
-            SpriteRenderer skirting = Visual("Skirting", walls[i], square, 0, -5.2f, 16, 32, .18f).GetComponent<SpriteRenderer>();
-            skirting.color = new Color(.90f,.79f,.66f);
+            SpriteRenderer skirting = Visual("Skirting", walls[i], square, 0, -5.2f, 16, 32, .18f)
+                .GetComponent<SpriteRenderer>();
+            skirting.color = new Color(.90f, .79f, .66f);
             skirting.sortingOrder = 30;
         }
         SetupCamera();
@@ -95,21 +132,26 @@ public static class ChapterOneSceneBuilder
         SetupBox(walls[1]);
         SetupTableAndBooks(walls[2]);
         SetupTrack(walls[3]);
-        Set(stateView, "bindings", new List<ChapterOneStateView.Binding>(bindings));
+        Set(stateView, "bindings", new List<ProgressConditionObjectBinding.Binding>(bindings));
         stateView.Refresh();
         EditorUtility.SetDirty(stateView);
         EditorSceneManager.MarkSceneDirty(scene);
         AssetDatabase.SaveAssets();
-        if (!EditorSceneManager.SaveScene(scene)) throw new IOException("FirstMap could not be saved.");
+        if (!EditorSceneManager.SaveScene(scene))
+            throw new IOException("FirstMap could not be saved.");
         Selection.activeGameObject = root;
-        Debug.Log("Chapter 1 applied to FirstMap. Existing scene snapshot: Temp/ChapterOneBackup/FirstMap.before-chapter1.unity");
+        Debug.Log(
+            "Chapter 1 applied to FirstMap. Existing scene snapshot: Temp/ChapterOneBackup/FirstMap.before-chapter1.unity"
+        );
     }
 
     private static void SetupCamera()
     {
         NextPosition pivot = Object.FindAnyObjectByType<NextPosition>();
-        InvestigationCameraController controller = Object.FindAnyObjectByType<InvestigationCameraController>();
-        if (pivot == null || controller == null) throw new InvalidOperationException("Existing camera rig missing.");
+        InvestigationCameraController controller =
+            Object.FindAnyObjectByType<InvestigationCameraController>();
+        if (pivot == null || controller == null)
+            throw new InvalidOperationException("Existing camera rig missing.");
         pivot.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         pivot.targetY = 0;
         pivot.rotateSpeed = 180;
@@ -128,17 +170,26 @@ public static class ChapterOneSceneBuilder
         Camera.main.fieldOfView = 60;
         Camera.main.transparencySortMode = TransparencySortMode.Orthographic;
         // Persistent prefab callbacks must resolve the new scene's presentation after loading.
-        foreach (Button button in Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (
+            Button button in Object.FindObjectsByType<Button>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            )
+        )
         {
             for (int i = button.onClick.GetPersistentEventCount() - 1; i >= 0; i--)
             {
                 string method = button.onClick.GetPersistentMethodName(i);
-                if (method != "TurnLeft" && method != "TurnRight") continue;
+                if (method != "TurnLeft" && method != "TurnRight")
+                    continue;
                 UnityEventTools.RemovePersistentListener(button.onClick, i);
                 RoomNavigationButton navigation = button.GetComponent<RoomNavigationButton>();
-                if (navigation == null) navigation = button.gameObject.AddComponent<RoomNavigationButton>();
-                if (method == "TurnLeft") UnityEventTools.AddPersistentListener(button.onClick, navigation.TurnLeft);
-                else UnityEventTools.AddPersistentListener(button.onClick, navigation.TurnRight);
+                if (navigation == null)
+                    navigation = button.gameObject.AddComponent<RoomNavigationButton>();
+                if (method == "TurnLeft")
+                    UnityEventTools.AddPersistentListener(button.onClick, navigation.TurnLeft);
+                else
+                    UnityEventTools.AddPersistentListener(button.onClick, navigation.TurnRight);
                 EditorUtility.SetDirty(button);
                 PrefabUtility.RecordPrefabInstancePropertyModifications(button);
             }
@@ -147,21 +198,26 @@ public static class ChapterOneSceneBuilder
 
     private static void SetupItems()
     {
-        foreach (ItemData item in AssetDatabase.FindAssets("t:ItemData", new[] { Items.TrimEnd('/') })
-                     .Select(g => AssetDatabase.LoadAssetAtPath<ItemData>(AssetDatabase.GUIDToAssetPath(g))))
+        foreach (
+            ItemData item in AssetDatabase
+                .FindAssets("t:ItemData", new[] { Items.TrimEnd('/') })
+                .Select(g =>
+                    AssetDatabase.LoadAssetAtPath<ItemData>(AssetDatabase.GUIDToAssetPath(g))
+                )
+        )
         {
             item.canDiscard = false;
             EditorUtility.SetDirty(item);
         }
-        var colors = new[] { new Color(.92f,.57f,.35f), new Color(.45f,.70f,.50f), new Color(.43f,.60f,.84f) };
         for (int i = 0; i < 3; i++)
         {
-            ItemData item = Item("PathPiece" + (char)('A' + i));
-            item.icon = MakeIcon("PathPiece" + (char)('A' + i), i + 1, colors[i]);
+            string spriteName = "PathPiece" + (char)('A' + i);
+            ItemData item = Item(spriteName);
+            item.icon = LoadGeneratedSprite(spriteName);
             EditorUtility.SetDirty(item);
         }
         ItemData track = Item("CompletedBallTrack");
-        track.icon = MakeIcon("CompletedTrack", 4, new Color(.76f,.61f,.40f));
+        track.icon = LoadGeneratedSprite("CompletedTrack");
         EditorUtility.SetDirty(track);
         if (!File.Exists(Items + "PinkBall.asset"))
         {
@@ -171,9 +227,12 @@ public static class ChapterOneSceneBuilder
             ball.description = "작은 길을 끝까지 굴러온 공. 다음 걸음에도 함께한다.";
             ball.width = ball.height = 1;
             ball.canDiscard = false;
-            ball.icon = MakeIcon("PinkBall", 5, new Color(.94f,.49f,.63f));
             AssetDatabase.CreateAsset(ball, Items + "PinkBall.asset");
         }
+        ItemData pinkBall = Item("PinkBall");
+        pinkBall.icon = LoadGeneratedSprite("PinkBall");
+        pinkBall.canDiscard = false;
+        EditorUtility.SetDirty(pinkBall);
     }
 
     private static void SetupInventoryUi()
@@ -187,63 +246,112 @@ public static class ChapterOneSceneBuilder
             RectTransform rect = button.GetComponent<RectTransform>();
             if (button.name == "InventoryOpenButton")
             {
-                rect.anchorMin = rect.anchorMax = new Vector2(1,0);
-                rect.pivot = new Vector2(.5f,.5f);
-                rect.anchoredPosition = new Vector2(-120,100);
-                rect.sizeDelta = new Vector2(140,110);
+                rect.anchorMin = rect.anchorMax = new Vector2(1, 0);
+                rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = new Vector2(-120, 100);
+                rect.sizeDelta = new Vector2(140, 110);
                 Image image = button.GetComponent<Image>();
                 image.color = Color.white;
                 image.preserveAspect = true;
-                image.sprite = AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/RoomSprite/UISprite/가방.png").OfType<Sprite>().FirstOrDefault();
+                image.sprite = AssetDatabase
+                    .LoadAllAssetsAtPath("Assets/Sprites/RoomSprite/UISprite/가방.png")
+                    .OfType<Sprite>()
+                    .FirstOrDefault();
             }
             else if (button.name == "LeftRotateButton" || button.name == "RightRotateButton")
             {
                 bool left = button.name == "LeftRotateButton";
-                rect.anchorMin = rect.anchorMax = new Vector2(left ? 0 : 1,.5f);
-                rect.pivot = new Vector2(.5f,.5f);
-                rect.anchoredPosition = new Vector2(left ? 72 : -72,0);
-                rect.sizeDelta = new Vector2(100,100);
-                button.GetComponent<Image>().color = new Color(.25f,.16f,.15f,.85f);
+                rect.anchorMin = rect.anchorMax = new Vector2(left ? 0 : 1, .5f);
+                rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = new Vector2(left ? 72 : -72, 0);
+                rect.sizeDelta = new Vector2(100, 100);
+                button.GetComponent<Image>().color = new Color(.25f, .16f, .15f, .85f);
             }
-            else continue;
-            EditorUtility.SetDirty(rect); EditorUtility.SetDirty(button.GetComponent<Image>());
+            else
+                continue;
+            EditorUtility.SetDirty(rect);
+            EditorUtility.SetDirty(button.GetComponent<Image>());
             PrefabUtility.RecordPrefabInstancePropertyModifications(rect);
             PrefabUtility.RecordPrefabInstancePropertyModifications(button.GetComponent<Image>());
         }
-        GameObject bag = Get<GameObject>(ui,"invenUI");
+        GameObject bag = Get<GameObject>(ui, "invenUI");
         RectTransform bagRect = bag.GetComponent<RectTransform>();
-        bagRect.sizeDelta = new Vector2(960,640);
-        EditorUtility.SetDirty(bagRect); PrefabUtility.RecordPrefabInstancePropertyModifications(bagRect);
-        bag.SetActive(false); PrefabUtility.RecordPrefabInstancePropertyModifications(bag);
+        bagRect.sizeDelta = new Vector2(960, 640);
+        EditorUtility.SetDirty(bagRect);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(bagRect);
+        bag.SetActive(false);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(bag);
     }
 
     private static void SetupHud(Transform parent)
     {
-        GameObject hud = new GameObject("ChapterHud", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        GameObject hud = new GameObject(
+            "ChapterHud",
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler),
+            typeof(GraphicRaycaster)
+        );
         hud.transform.SetParent(parent, false);
         hud.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         hud.GetComponent<Canvas>().sortingOrder = 20;
         CanvasScaler scaler = hud.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920,1080);
+        scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = .5f;
-        TMP_Text objective = UiText("Objective", hud.transform, "집에서 문을 열고 나가라", new Vector2(0,480), new Vector2(1300,55), 28);
-        TMP_Text hint = UiText("Hint", hud.transform, "물건 클릭  ·  가방에서 R 회전  ·  장착 후 사용  ·  ESC 닫기  ·  F5 저장 / F9 불러오기", new Vector2(0,-495), new Vector2(1420,70), 22);
-        hint.color = new Color(.98f,.91f,.80f);
-        TMP_Text dialogueText = UiText("ParentDialogue", hud.transform, "", new Vector2(0,360), new Vector2(1360,130), 32);
-        DialogueTextController dialogue = dialogueText.gameObject.AddComponent<DialogueTextController>();
+        TMP_Text objective = UiText(
+            "Objective",
+            hud.transform,
+            "집에서 문을 열고 나가라",
+            new Vector2(0, 480),
+            new Vector2(1300, 55),
+            28
+        );
+        TMP_Text hint = UiText(
+            "Hint",
+            hud.transform,
+            "물건 클릭  ·  가방에서 R 회전  ·  장착 후 사용  ·  ESC 닫기  ·  F5 저장 / F9 불러오기",
+            new Vector2(0, -495),
+            new Vector2(1420, 70),
+            22
+        );
+        hint.color = new Color(.98f, .91f, .80f);
+        TMP_Text dialogueText = UiText(
+            "ParentDialogue",
+            hud.transform,
+            "",
+            new Vector2(0, 360),
+            new Vector2(1360, 130),
+            32
+        );
+        DialogueTextController dialogue =
+            dialogueText.gameObject.AddComponent<DialogueTextController>();
         Set(dialogue, "useCurrentPositionAsShown", true);
         Set(dialogue, "charactersPerSecond", 45f);
         Set(presentation, "objective", objective);
         Set(presentation, "hint", hint);
         Set(presentation, "dialogue", dialogue);
 
-        GameObject opening = new GameObject("Opening", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        GameObject opening = new GameObject(
+            "Opening",
+            typeof(RectTransform),
+            typeof(Image),
+            typeof(CanvasGroup)
+        );
         opening.transform.SetParent(hud.transform, false);
         RectTransform rect = opening.GetComponent<RectTransform>();
-        rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.sizeDelta = Vector2.zero;
-        opening.GetComponent<Image>().color = new Color(.09f,.065f,.07f,1);
-        UiText("Title", opening.transform, "1 Chapter\n빈손\n<size=28>유아기</size>", Vector2.zero, new Vector2(1000,320), 56).color = new Color(.98f,.91f,.80f);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.sizeDelta = Vector2.zero;
+        opening.GetComponent<Image>().color = new Color(.09f, .065f, .07f, 1);
+        UiText(
+            "Title",
+            opening.transform,
+            "1 Chapter\n빈손\n<size=28>유아기</size>",
+            Vector2.zero,
+            new Vector2(1000, 320),
+            56
+        ).color = new Color(.98f, .91f, .80f);
         opening.GetComponent<CanvasGroup>().alpha = 0;
         opening.GetComponent<CanvasGroup>().blocksRaycasts = false;
         Set(presentation, "opening", opening.GetComponent<CanvasGroup>());
@@ -251,122 +359,307 @@ public static class ChapterOneSceneBuilder
 
     private static void SetupEntry(Transform wall)
     {
-        GameObject door = Visual("ExitDoor_Placeholder", wall, square, -5,-1.3f,14.8f,4,7.5f,true);
-        door.GetComponent<SpriteRenderer>().color = new Color(.47f,.30f,.22f);
-        Label("DoorLabel", wall, "집 밖으로", -5,2.8f,14.5f,1.1f);
-        Visual("DoorKnob", wall, Item("PinkBall").icon, -3.7f,-1.5f,14.5f,.3f,.3f);
-        ChapterFlowController exit = door.AddComponent<ChapterFlowController>();
+        GameObject doorFrame = Visual(
+            "ExitDoorFrame",
+            wall,
+            LoadGeneratedSprite("ExitDoorFrame"),
+            -5,
+            -1.3f,
+            14.8f,
+            4,
+            7.5f,
+            true
+        );
+        doorFrame.GetComponent<SpriteRenderer>().color = Color.white;
+        GameObject doorHinge = Node("ExitDoorHinge", wall, new Vector3(-7f, -1.3f, 14.7f));
+        GameObject doorLeaf = Visual(
+            "ExitDoor",
+            doorHinge.transform,
+            LoadGeneratedSprite("ExitDoor"),
+            2f,
+            0f,
+            0f,
+            4f,
+            7.5f
+        );
+        doorLeaf.GetComponent<SpriteRenderer>().color = Color.white;
+        doorLeaf.GetComponent<SpriteRenderer>().sortingOrder = doorFrame.GetComponent<SpriteRenderer>().sortingOrder + 1;
+        TransformTweeningComponent doorTween = doorHinge.AddComponent<TransformTweeningComponent>();
+        SetEnum(doorTween, "_callbackType", 2);
+        SetEnum(doorTween, "_tweeningFlags", 2);
+        Set(doorTween, "_targetRotation", new Vector3(0f, 115f, 0f));
+        Set(doorTween, "_duration", 1.2f);
+        Label("DoorLabel", wall, "집 밖으로", -5, 2.8f, 14.5f, 1.1f);
+        ChapterFlowController exit = doorFrame.AddComponent<ChapterFlowController>();
         Set(exit, "chapterCompletionId", ChapterOneProgressIds.Complete);
-        Set(exit, "requiredPuzzleIds", new List<OnlyOneUnityString>
-        {
-            ChapterOneProgressIds.Box,
-            ChapterOneProgressIds.Chest,
-            ChapterOneProgressIds.Table,
-            ChapterOneProgressIds.Books,
-            ChapterOneProgressIds.BallFinished,
-            ChapterOneProgressIds.ParentGift,
-            ChapterOneProgressIds.Pickup("PinkBall")
-        });
+        Set(
+            exit,
+            "requiredPuzzleIds",
+            new List<OnlyOneUnityString>
+            {
+                ChapterOneProgressIds.Box,
+                ChapterOneProgressIds.Chest,
+                ChapterOneProgressIds.Table,
+                ChapterOneProgressIds.Books,
+                ChapterOneProgressIds.BallFinished,
+                ChapterOneProgressIds.ParentGift,
+                ChapterOneProgressIds.Pickup("PinkBall"),
+            }
+        );
         Set(exit, "nextSceneName", "BaseMap");
         Set(exit, "nextChapterTitle", "2 Chapter : 채워지는 가방\n청소년기");
         Event(exit, "onExitBlocked", presentation.ParentHint);
         Set(presentation, "exit", exit);
-        GameObject glow = Visual("OpenDoorLight", wall, square, -5,-1.3f,14.6f,3.5f,7f);
-        glow.GetComponent<SpriteRenderer>().color = new Color(1f,.89f,.63f,.65f);
+        GameObject glow = Visual("OpenDoorLight", wall, square, -5, -1.3f, 14.6f, 3.5f, 7f);
+        glow.GetComponent<SpriteRenderer>().color = new Color(1f, .89f, .63f, .65f);
         Bind(glow, new[] { ChapterOneProgressIds.ParentGift });
 
-        GameObject parent = Visual("Parent_Placeholder", wall, square, 4,-1.3f,14.5f,3.4f,5.5f,true);
-        parent.GetComponent<SpriteRenderer>().color = new Color(.66f,.47f,.57f);
-        Label("ParentLabel", wall, "부모\n꼬맹이, 이리 오렴", 4,2.5f,14.2f,1f);
+        Sprite[] parentFrames = LoadGeneratedSprites("Parent");
+        GameObject parent = Visual(
+            "ParentCharacter",
+            wall,
+            parentFrames[0],
+            4,
+            -1.3f,
+            14.5f,
+            2.6f,
+            6.2f,
+            true
+        );
+        parent.GetComponent<SpriteRenderer>().color = Color.white;
+        parent
+            .AddComponent<SpriteSheetAnimator>()
+            .Configure(parent.GetComponent<SpriteRenderer>(), parentFrames, 3.5f);
+        Label("ParentLabel", wall, "부모\n꼬맹이, 이리 오렴", 4, 2.5f, 14.2f, 1f);
         MultiStepItemUsePuzzle gift = parent.AddComponent<MultiStepItemUsePuzzle>();
-        Set(gift.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.ParentGift);
+        Set(
+            gift.GetComponent<PuzzleStateController>(),
+            "puzzleId",
+            ChapterOneProgressIds.ParentGift
+        );
         var step = new ItemUsePuzzleStep
         {
             progressId = ChapterOneProgressIds.ParentGiftStep,
             requiredEquippedItem = Item("CatDoll"),
-            consumeOnUse = true
+            consumeOnUse = true,
         };
         step.onMissingItem = new UnityEvent();
         UnityEventTools.AddPersistentListener(step.onMissingItem, presentation.ParentHint);
         step.onFirstCompleted = new UnityEvent();
-        UnityEventTools.AddStringPersistentListener(step.onFirstCompleted, presentation.Say, "고마워, 꼬맹이. 이제 문을 열 수 있단다. 네 손으로 찾아낸 것들을 기억하렴.");
+        UnityEventTools.AddStringPersistentListener(
+            step.onFirstCompleted,
+            presentation.Say,
+            "고마워, 꼬맹이. 이제 문을 열 수 있단다. 네 손으로 찾아낸 것들을 기억하렴."
+        );
         Set(gift, "steps", new List<ItemUsePuzzleStep> { step });
+        Event(
+            gift.GetComponent<PuzzleStateController>(),
+            "onCompletedStateApplied",
+            doorTween.TweeningExecute
+        );
         Event(gift, "onAlreadyCompleted", presentation.ParentHint);
-        Visual("ChildDrawing", wall, LoadSprite("어린이그림"), 10,2.5f,15,3.5f,3.8f);
-        Pickup("RedBook", wall, -10,-3.9f,14,1.3f,1.6f);
+        Visual("ChildDrawing", wall, LoadSprite("어린이그림"), 10, 2.5f, 15, 3.5f, 3.8f);
+        Pickup("RedBook", wall, -10, -3.9f, 14, 1.3f, 1.6f);
     }
 
     private static void SetupBox(Transform wall)
     {
-        Visual("SmallBookshelf", wall, LoadSprite("책장"), -7,-1.3f,15,6,7);
-        Pickup("GreenBook", wall, -8.5f,0,14.4f,1.1f,1.7f);
-        GameObject box = Visual("PushBox", wall, LoadSprite("박스"), 4,-2.3f,13.5f,7,5.5f,true);
+        Visual("SmallBookshelf", wall, LoadSprite("책장"), -7, -1.3f, 15, 6, 7);
+        Pickup("GreenBook", wall, -8.5f, 0, 14.4f, 1.1f, 1.7f);
+        GameObject box = Visual(
+            "PushBox",
+            wall,
+            LoadSprite("박스"),
+            4,
+            -2.3f,
+            13.5f,
+            7,
+            5.5f,
+            true
+        );
         PushablePuzzleObject push = box.AddComponent<PushablePuzzleObject>();
         Set(push.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.Box);
-        Set(push, "pushStateIds", new List<OnlyOneUnityString> { ChapterOneProgressIds.BoxPushOne });
-        Set(push, "localPushOffset", new Vector3(6,0,0));
-        EventText(push, "onPushCompleted", "상자 뒤에 작은 상자와 토끼가 숨어 있었네. 토끼를 가방에 담아 보렴.");
-        Bind(Label("PushLabel", wall, "밀어 보기", 4,1,13.3f,1f).gameObject,
-            Array.Empty<OnlyOneUnityString>(), new[] { ChapterOneProgressIds.Box });
-        GameObject chest = Visual("LockedChest", wall, LoadSprite("박스"), 2,-3.1f,14.4f,3,2.4f,true);
-        chest.GetComponent<SpriteRenderer>().color = new Color(.75f,.81f,.91f);
+        Set(
+            push,
+            "pushStateIds",
+            new List<OnlyOneUnityString> { ChapterOneProgressIds.BoxPushOne }
+        );
+        Set(push, "localPushOffset", new Vector3(6, 0, 0));
+        EventText(
+            push,
+            "onPushCompleted",
+            "상자 뒤에 작은 상자와 토끼가 숨어 있었네. 토끼를 가방에 담아 보렴."
+        );
+        Bind(
+            Label("PushLabel", wall, "밀어 보기", 4, 1, 13.3f, 1f).gameObject,
+            Array.Empty<OnlyOneUnityString>(),
+            new[] { ChapterOneProgressIds.Box }
+        );
+        GameObject chest = Visual(
+            "LockedChest",
+            wall,
+            LoadSprite("박스"),
+            2,
+            -3.1f,
+            14.4f,
+            3,
+            2.4f,
+            true
+        );
+        chest.GetComponent<SpriteRenderer>().color = new Color(.75f, .81f, .91f);
         NumericCodeLock code = chest.AddComponent<NumericCodeLock>();
         Set(code.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.Chest);
         Set(code, "displayTitle", "작은 상자 · 구멍 너머의 네 숫자");
         Set(code, "expectedCode", "2413");
         EventText(code, "onCorrectCode", "찰칵! 곰인형과 첫 번째 길 조각이 들어 있구나.");
         EventText(code, "onAlreadyUnlocked", "상자는 열려 있어. 옆에 남아 있는 물건을 챙기렴.");
-        Pickup("RabbitDoll", wall, 5,-2.8f,14.1f,1.7f,3);
-        Pickup("BearDoll", wall, 1,-1.5f,14,1.5f,2.5f,new[] { ChapterOneProgressIds.Chest });
-        Pickup("PathPieceA", wall, 3.1f,-1.7f,13.8f,1.3f,1.3f,new[] { ChapterOneProgressIds.Chest });
+        Pickup("RabbitDoll", wall, 5, -2.8f, 14.1f, 1.7f, 3);
+        Pickup("BearDoll", wall, 1, -1.5f, 14, 1.5f, 2.5f, new[] { ChapterOneProgressIds.Chest });
+        Pickup(
+            "PathPieceA",
+            wall,
+            3.1f,
+            -1.7f,
+            13.8f,
+            1.3f,
+            1.3f,
+            new[] { ChapterOneProgressIds.Chest }
+        );
 
-        GameObject hole = Visual("CrawlHole_Placeholder", wall, square, -2,-4.1f,14.6f,2.5f,2.3f,true);
-        hole.GetComponent<SpriteRenderer>().color = new Color(.08f,.065f,.10f);
+        GameObject hole = Visual(
+            "CrawlHole",
+            wall,
+            LoadGeneratedSprite("CrawlHole"),
+            -2,
+            -4.1f,
+            14.6f,
+            3.4f,
+            2.6f,
+            true
+        );
+        hole.GetComponent<SpriteRenderer>().color = Color.white;
         ChapterOneClue clue = hole.AddComponent<ChapterOneClue>();
         InvestigationPoint point = hole.AddComponent<InvestigationPoint>();
-        Transform viewpoint = Node("InvestigationViewPoint", wall, new Vector3(-2,-3.3f,11.7f)).transform;
-        Set(point, "viewPoint", viewpoint); Set(point, "fieldOfView", 40f);
+        Transform viewpoint = Node(
+            "InvestigationViewPoint",
+            wall,
+            new Vector3(-2, -3.3f, 11.7f)
+        ).transform;
+        Set(point, "viewPoint", viewpoint);
+        Set(point, "fieldOfView", 40f);
         var controller = Object.FindAnyObjectByType<InvestigationCameraController>();
         Set(point, "cameraController", controller);
-        Set(clue, "cameraController", controller); Set(clue, "investigationPoint", point); Set(clue, "presentation", presentation);
+        Set(clue, "cameraController", controller);
+        Set(clue, "investigationPoint", point);
+        Set(clue, "presentation", presentation);
         Set(clue, "clueDiscoveredId", ChapterOneProgressIds.HoleClue);
-        Label("ClueDigits_Placeholder", wall, "2  4  1  3", -2,-3.8f,14.3f,.27f, Color.white);
-        Label("HoleLabel", wall, "작은 구멍 · 들여다보기", -2,-5.9f,14.1f,.65f);
+        Label("ClueDigits_Placeholder", wall, "2  4  1  3", -2, -3.8f, 14.3f, .27f, Color.white);
+        Label("HoleLabel", wall, "작은 구멍 · 들여다보기", -2, -5.9f, 14.1f, .65f);
     }
 
     private static void SetupTableAndBooks(Transform wall)
     {
-        GameObject table = Visual("DollTable", wall, LoadSprite("테이블"), -5,-2.8f,14.8f,8,4.2f);
+        GameObject table = Visual(
+            "DollTable",
+            wall,
+            LoadSprite("테이블"),
+            -5,
+            -2.8f,
+            14.8f,
+            8,
+            4.2f
+        );
         GameObject puzzleRoot = Node("DollPlacement", wall, Vector3.zero);
         ItemPlacementPuzzle puzzle = puzzleRoot.AddComponent<ItemPlacementPuzzle>();
         Set(puzzle.GetComponent<PuzzleStateController>(), "puzzleId", ChapterOneProgressIds.Table);
-        Set(puzzle, "inventoryManager", inventory); Set(puzzle, "requireSequence", false);
+        Set(puzzle, "inventoryManager", inventory);
+        Set(puzzle, "requireSequence", false);
         List<ItemPlacementSocket> sockets = new();
         for (int i = 0; i < 2; i++)
         {
             string itemName = i == 0 ? "BearDoll" : "RabbitDoll";
-            float x = -7 + i*4;
-            GameObject slot = Visual(itemName+"Socket", puzzleRoot.transform, square, x,-.8f,14,2.1f,3.3f,true);
-            slot.GetComponent<SpriteRenderer>().color = new Color(.98f,.90f,.70f,.23f);
+            float x = -7 + i * 4;
+            Sprite socketSprite = LoadGeneratedSprite(i == 0 ? "BearSocket" : "RabbitSocket");
+            float socketWidth = i == 0 ? 2.6f : 2.5f;
+            float socketHeight = i == 0 ? 2.7f : 3.3f;
+            GameObject slot = Visual(
+                itemName + "Socket",
+                puzzleRoot.transform,
+                socketSprite,
+                x,
+                -.8f,
+                14,
+                socketWidth,
+                socketHeight,
+                true
+            );
+            slot.GetComponent<SpriteRenderer>().color = Color.white;
             ItemPlacementSocket socket = slot.AddComponent<ItemPlacementSocket>();
             Set(socket, "puzzle", puzzle);
-            Set(socket, "progressId", i == 0
-                ? ChapterOneProgressIds.BearSocket
-                : ChapterOneProgressIds.RabbitSocket);
+            Set(
+                socket,
+                "progressId",
+                i == 0 ? ChapterOneProgressIds.BearSocket : ChapterOneProgressIds.RabbitSocket
+            );
             Set(socket, "requiredItem", Item(itemName));
             Set(socket, "sequenceIndex", i);
-            GameObject placed = Visual("Placed"+itemName, wall, Item(itemName).icon, x,-.7f,13.8f,1.7f,3f);
-            Set(socket, "placedVisual", placed); placed.SetActive(false);
-            EventText(socket, "onWrongItem", i == 0 ? "갈색 곰인형을 장착해서 왼쪽 자리에 놓아 보렴." : "키 큰 흰 토끼인형을 장착해서 오른쪽 자리에 놓아 보렴.");
+            GameObject placed = Visual(
+                "Placed" + itemName,
+                wall,
+                Item(itemName).icon,
+                x,
+                -.7f,
+                13.8f,
+                1.7f,
+                3f
+            );
+            Set(socket, "placedVisual", placed);
+            placed.SetActive(false);
+            EventText(
+                socket,
+                "onWrongItem",
+                i == 0
+                    ? "갈색 곰인형을 장착해서 왼쪽 자리에 놓아 보렴."
+                    : "키 큰 흰 토끼인형을 장착해서 오른쪽 자리에 놓아 보렴."
+            );
             sockets.Add(socket);
         }
         Set(puzzle, "sockets", sockets);
-        EventText(puzzle.GetComponent<PuzzleStateController>(), "onFirstCompleted", "인형들이 제자리를 찾았네. 테이블의 비밀 서랍이 열렸어.");
-        Label("DollRule", wall, "갈색 곰  →  키 큰 흰 토끼", -5,2.1f,14,.8f);
-        GameObject drawer = Visual("SecretDrawer_Placeholder", wall, square, -5,-3.1f,14.3f,3,1);
-        drawer.GetComponent<SpriteRenderer>().color = new Color(.20f,.13f,.09f);
-        Bind(drawer,new[] { ChapterOneProgressIds.Table });
-        Pickup("PathPieceB",wall,-5,-3,13.7f,1,1,new[] { ChapterOneProgressIds.Table });
+        EventText(
+            puzzle.GetComponent<PuzzleStateController>(),
+            "onFirstCompleted",
+            "인형들이 제자리를 찾았네. 테이블의 비밀 서랍이 열렸어."
+        );
+        Label("DollRule", wall, "갈색 곰  →  키 큰 흰 토끼", -5, 2.1f, 14, .8f);
+        GameObject closedDrawer = Visual(
+            "SecretDrawerClosed",
+            wall,
+            LoadGeneratedSprite("SecretDrawerClosed"),
+            -5,
+            -3.1f,
+            14.3f,
+            2.4f,
+            2.1f
+        );
+        closedDrawer.GetComponent<SpriteRenderer>().color = Color.white;
+        Bind(
+            closedDrawer,
+            Array.Empty<OnlyOneUnityString>(),
+            new[] { ChapterOneProgressIds.Table }
+        );
+        GameObject openDrawer = Visual(
+            "SecretDrawerOpen",
+            wall,
+            LoadGeneratedSprite("SecretDrawerOpen"),
+            -5,
+            -3.1f,
+            14.3f,
+            2.4f,
+            2.1f
+        );
+        openDrawer.GetComponent<SpriteRenderer>().color = Color.white;
+        Bind(openDrawer, new[] { ChapterOneProgressIds.Table });
+        Pickup("PathPieceB", wall, -5, -3, 13.7f, 1, 1, new[] { ChapterOneProgressIds.Table });
         GameObject bookcase = Visual(
             "Bookcase",
             wall,
@@ -375,12 +668,15 @@ public static class ChapterOneSceneBuilder
             -.7f,
             15,
             6,
-            8);
+            8
+        );
         Material mixMaterial = AssetDatabase.LoadAssetAtPath<Material>(
-            SpriteTextureMixMaterialPath);
+            SpriteTextureMixMaterialPath
+        );
         if (mixMaterial == null)
             throw new InvalidOperationException(
-                $"Missing texture mix material: {SpriteTextureMixMaterialPath}");
+                $"Missing texture mix material: {SpriteTextureMixMaterialPath}"
+            );
         bookcase.GetComponent<SpriteRenderer>().sharedMaterial = mixMaterial;
         SpriteTextureMixer mixer = bookcase.AddComponent<SpriteTextureMixer>();
         Set(mixer, "targetSprite", LoadSprite("퍼즐 완료 책장"));
@@ -390,11 +686,10 @@ public static class ChapterOneSceneBuilder
             bookcase.AddComponent<ProgressSpriteTextureMixer>();
         Set(progressMixer, "completedProgressId", ChapterOneProgressIds.Books);
 
-        Pickup("BrownBook",wall,10,-4.1f,14,1.2f,1.6f);
-        GameObject bookPuzzle = Node("BookArrangement",wall,Vector3.zero);
+        Pickup("BrownBook", wall, 10, -4.1f, 14, 1.2f, 1.6f);
+        GameObject bookPuzzle = Node("BookArrangement", wall, Vector3.zero);
         ItemPlacementPuzzle layout = bookPuzzle.AddComponent<ItemPlacementPuzzle>();
-        PuzzleStateController bookCompletion =
-            layout.GetComponent<PuzzleStateController>();
+        PuzzleStateController bookCompletion = layout.GetComponent<PuzzleStateController>();
         Set(bookCompletion, "puzzleId", ChapterOneProgressIds.Books);
         Set(layout, "inventoryManager", inventory);
         Set(layout, "requireSequence", false);
@@ -410,16 +705,18 @@ public static class ChapterOneSceneBuilder
                 ChapterOneProgressIds.RedBookSocket,
                 new Vector3(8.549f, -.665f, 15f),
                 new Vector3(8.5346f, -.6415f, 15f),
-                new Vector3(.436083943f, .6305067f, 1f)),
+                new Vector3(.436083943f, .6305067f, 1f)
+            ),
             BookSocket(
                 bookPuzzle.transform,
-                                wall,
+                wall,
                 "GreenBook",
                 "초록책 옆",
                 ChapterOneProgressIds.GreenBookSocket,
                 new Vector3(6.28f, 1.65f, 15f),
                 new Vector3(6.2899f, 1.6175f, 15f),
-                new Vector3(.485102445f, .677090943f, 1f)),
+                new Vector3(.485102445f, .677090943f, 1f)
+            ),
             BookSocket(
                 bookPuzzle.transform,
                 wall,
@@ -428,7 +725,8 @@ public static class ChapterOneSceneBuilder
                 ChapterOneProgressIds.BrownBookSocket,
                 new Vector3(5.051f, -2.853f, 15f),
                 new Vector3(5.04f, -2.8804f, 15f),
-                new Vector3(.469135f, .662830651f, 1f))
+                new Vector3(.469135f, .662830651f, 1f)
+            ),
         };
         foreach (ItemPlacementSocket socket in bookSockets)
             Set(socket, "puzzle", layout);
@@ -436,12 +734,14 @@ public static class ChapterOneSceneBuilder
         Set(
             progressMixer,
             "hideWhenCompleted",
-            bookSockets.Select(socket => socket.PlacedVisual).ToArray());
+            bookSockets.Select(socket => socket.PlacedVisual).ToArray()
+        );
         EventText(
             bookCompletion,
             "onFirstCompleted",
-            "책장이 정리됐어. 책장 아래에서 마지막 길 조각을 찾아보렴.");
-        Pickup("PathPieceC",wall,6,-3.8f,14,1.3f,1.3f,new[] { ChapterOneProgressIds.Books });
+            "책장이 정리됐어. 책장 아래에서 마지막 길 조각을 찾아보렴."
+        );
+        Pickup("PathPieceC", wall, 6, -3.8f, 14, 1.3f, 1.3f, new[] { ChapterOneProgressIds.Books });
     }
 
     private static ItemPlacementSocket BookSocket(
@@ -452,12 +752,10 @@ public static class ChapterOneSceneBuilder
         OnlyOneUnityString progressId,
         Vector3 socketPosition,
         Vector3 visualPosition,
-        Vector3 visualScale)
+        Vector3 visualScale
+    )
     {
-        GameObject slot = Node(
-            itemName + "BookcaseSocket",
-            puzzleRoot,
-            socketPosition);
+        GameObject slot = Node(itemName + "BookcaseSocket", puzzleRoot, socketPosition);
         BoxCollider collider = slot.AddComponent<BoxCollider>();
         collider.size = new Vector3(.62f, 2.15f, .2f);
 
@@ -474,170 +772,409 @@ public static class ChapterOneSceneBuilder
             visualPosition.y,
             visualPosition.z,
             .38f,
-            1.9f);
+            1.9f
+        );
         placedVisual.transform.localScale = visualScale;
         placedVisual.SetActive(false);
         Set(socket, "placedVisual", placedVisual);
         EventText(
             socket,
             "onWrongItem",
-            $"{Item(itemName).itemName}을 장착한 뒤 빈자리에 놓아 보렴.");
-        EventText(
-            socket,
-            "onFirstPlaced",
-            $"{Item(itemName).itemName}이 제자리를 찾았어.");
+            $"{Item(itemName).itemName}을 장착한 뒤 빈자리에 놓아 보렴."
+        );
+        EventText(socket, "onFirstPlaced", $"{Item(itemName).itemName}이 제자리를 찾았어.");
         return socket;
     }
 
     private static void SetupTrack(Transform wall)
     {
-        GameObject machine = Visual("BallTrackMachine",wall,LoadSprite("공굴리기"),0,0,14.7f,11,10,true);
-        machine.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
+        GameObject machine = Visual(
+            "BallTrackMachine",
+            wall,
+            LoadSprite("공굴리기"),
+            0,
+            0,
+            14.7f,
+            11,
+            10,
+            true
+        );
+        machine.GetComponent<SpriteRenderer>().maskInteraction =
+            SpriteMaskInteraction.VisibleOutsideMask;
         MultiStepItemUsePuzzle install = machine.AddComponent<MultiStepItemUsePuzzle>();
         InvestigationPoint investigationPoint = machine.AddComponent<InvestigationPoint>();
         Transform investigationViewPoint = Node(
             "InvestigationViewPoint",
             machine.transform,
-            new Vector3(0f, .3f, -2.9f)).transform;
+            new Vector3(0f, .3f, -2.9f)
+        ).transform;
         Set(investigationPoint, "viewPoint", investigationViewPoint);
         Set(investigationPoint, "fieldOfView", 30f);
         Set(
             investigationPoint,
             "cameraController",
-            Object.FindAnyObjectByType<InvestigationCameraController>());
-        Set(install.GetComponent<PuzzleStateController>(),"puzzleId",ChapterOneProgressIds.TrackInstalled);
-        Set(install,"inventoryManager",inventory);
+            Object.FindAnyObjectByType<InvestigationCameraController>()
+        );
+        Set(
+            install.GetComponent<PuzzleStateController>(),
+            "puzzleId",
+            ChapterOneProgressIds.TrackInstalled
+        );
+        Set(install, "inventoryManager", inventory);
         var step = new ItemUsePuzzleStep
         {
             progressId = ChapterOneProgressIds.TrackInstallStep,
             requiredEquippedItem = Item("CompletedBallTrack"),
             consumeOnUse = true,
-            onMissingItem = new UnityEvent()
+            onMissingItem = new UnityEvent(),
         };
-        UnityEventTools.AddStringPersistentListener(step.onMissingItem,presentation.Say,"A, B, C를 가방 안에서 좌우로 이어 조합하고, 완성된 길을 장착해서 끼워 보렴.");
-        Set(install,"steps",new List<ItemUsePuzzleStep> { step });
-        Label("TrackRule",wall,"A + B + C  →  하나의 길",0,6.1f,14,.9f);
-        GameObject missing = Node("TrackGap_Mask",wall,new Vector3(0,0,14.3f));
-        missing.transform.localScale = new Vector3(7,.8f,1);
+        UnityEventTools.AddStringPersistentListener(
+            step.onMissingItem,
+            presentation.Say,
+            "A, B, C를 가방 안에서 좌우로 이어 조합하고, 완성된 길을 장착해서 끼워 보렴."
+        );
+        Set(install, "steps", new List<ItemUsePuzzleStep> { step });
+        Label("TrackRule", wall, "A + B + C  →  하나의 길", 0, 6.1f, 14, .9f);
+        GameObject missing = Node("TrackGap_Mask", wall, new Vector3(0, 0, 14.3f));
+        missing.transform.localScale = new Vector3(7, .8f, 1);
         SpriteMask trackGapMask = missing.AddComponent<SpriteMask>();
         trackGapMask.sprite = square;
-        Bind(missing,Array.Empty<OnlyOneUnityString>(),new[] { ChapterOneProgressIds.TrackInstalled });
-        Transform ball = Visual("RollingBall_Placeholder",wall,Item("PinkBall").icon,-3.2f,3.4f,14.1f,.5f,.5f).transform;
-        Vector2[] points = { new(-3.2f,3.4f),new(2.8f,3.4f),new(4,2.1f),new(2.7f,.9f),new(-3.4f,.9f),new(-4,-.4f),new(-3,-1.4f),new(2.8f,-1.4f),new(4,-2.5f),new(2.6f,-3.5f) };
-        var waypoints = points.Select((p,i)=>Node("BallWaypoint"+i,wall,new Vector3(p.x,p.y,14.1f)).transform).ToArray();
-        ChapterOneBallRun roll = Node("BallRun",wall,Vector3.zero).AddComponent<ChapterOneBallRun>();
-        Set(roll,"ball",ball); Set(roll,"waypoints",waypoints); Set(roll,"presentation",presentation);
-        Set(roll,"trackInstalledId",ChapterOneProgressIds.TrackInstalled);
-        Set(roll,"ballFinishedId",ChapterOneProgressIds.BallFinished);
-        GameObject cage = Visual("CatLatch_Placeholder",wall,square,8,-2,14.7f,3.5f,4.3f);
-        cage.GetComponent<SpriteRenderer>().color = new Color(.40f,.30f,.23f,.6f);
-        GameObject lockedCat = Visual("LockedCat",wall,Item("CatDoll").icon,8,-2,14.4f,2.2f,3.5f);
-        Bind(lockedCat,Array.Empty<OnlyOneUnityString>(),new[] { ChapterOneProgressIds.BallFinished });
-        Pickup("CatDoll",wall,8,-2,14.2f,2.2f,3.5f,new[] { ChapterOneProgressIds.BallFinished });
-        Pickup("PinkBall",wall,3,-4.7f,13.8f,.8f,.8f,new[] { ChapterOneProgressIds.BallFinished });
-        Label("CatLabel",wall,"길의 끝에서 기다리는 친구",8,1,14,.65f);
+        Bind(
+            missing,
+            Array.Empty<OnlyOneUnityString>(),
+            new[] { ChapterOneProgressIds.TrackInstalled }
+        );
+        Transform ball = Visual(
+            "RollingBall",
+            wall,
+            Item("PinkBall").icon,
+            -3.2f,
+            3.4f,
+            14.1f,
+            .5f,
+            .5f
+        ).transform;
+        Vector2[] points =
+        {
+            new(-3.2f, 3.4f),
+            new(2.8f, 3.4f),
+            new(4, 2.1f),
+            new(2.7f, .9f),
+            new(-3.4f, .9f),
+            new(-4, -.4f),
+            new(-3, -1.4f),
+            new(2.8f, -1.4f),
+            new(4, -2.5f),
+            new(2.6f, -3.5f),
+        };
+        var waypoints = points
+            .Select(
+                (p, i) => Node("BallWaypoint" + i, wall, new Vector3(p.x, p.y, 14.1f)).transform
+            )
+            .ToArray();
+        ChapterOneBallRun roll = Node("BallRun", wall, Vector3.zero)
+            .AddComponent<ChapterOneBallRun>();
+        Set(roll, "ball", ball);
+        Set(roll, "waypoints", waypoints);
+        Set(roll, "presentation", presentation);
+        Set(roll, "trackInstalledId", ChapterOneProgressIds.TrackInstalled);
+        Set(roll, "ballFinishedId", ChapterOneProgressIds.BallFinished);
+        GameObject cage = Visual(
+            "CatLatch",
+            wall,
+            LoadGeneratedSprite("CatLatch"),
+            8,
+            -2,
+            14.7f,
+            3.5f,
+            2.85f
+        );
+        cage.GetComponent<SpriteRenderer>().color = Color.white;
+        GameObject lockedCat = Visual(
+            "LockedCat",
+            wall,
+            Item("CatDoll").icon,
+            8,
+            -2,
+            14.4f,
+            2.2f,
+            3.5f
+        );
+        Bind(
+            lockedCat,
+            Array.Empty<OnlyOneUnityString>(),
+            new[] { ChapterOneProgressIds.BallFinished }
+        );
+        Pickup(
+            "CatDoll",
+            wall,
+            8,
+            -2,
+            14.2f,
+            2.2f,
+            3.5f,
+            new[] { ChapterOneProgressIds.BallFinished }
+        );
+        Pickup(
+            "PinkBall",
+            wall,
+            3,
+            -4.7f,
+            13.8f,
+            .8f,
+            .8f,
+            new[] { ChapterOneProgressIds.BallFinished }
+        );
+        Label("CatLabel", wall, "길의 끝에서 기다리는 친구", 8, 1, 14, .65f);
     }
 
-    private static GameObject Pickup(string itemName, Transform parent, float x,float y,float z,float width,float height,OnlyOneUnityString[] required=null)
+    private static GameObject Pickup(
+        string itemName,
+        Transform parent,
+        float x,
+        float y,
+        float z,
+        float width,
+        float height,
+        OnlyOneUnityString[] required = null
+    )
     {
         OnlyOneUnityString id = ChapterOneProgressIds.Pickup(itemName);
-        GameObject go = Visual("Pickup_"+itemName,parent,Item(itemName).icon,x,y,z,width,height,true);
-        Itemgetbase pickup = go.AddComponent<Itemgetbase>(); pickup.item=Item(itemName);
-        Set(pickup,"inventoryManager",inventory); Set(pickup,"persistentPickupId",id);
-        Set(pickup,"keepForStateRestore",true);
-        Bind(go,required ?? Array.Empty<OnlyOneUnityString>(),new[] { id });
-        if (itemName.StartsWith("PathPiece")) Label(itemName+"Label",go.transform,itemName.Substring(itemName.Length-1),0,0,-.1f,.5f);
+        GameObject go = Visual(
+            "Pickup_" + itemName,
+            parent,
+            Item(itemName).icon,
+            x,
+            y,
+            z,
+            width,
+            height,
+            true
+        );
+        Itemgetbase pickup = go.AddComponent<Itemgetbase>();
+        pickup.item = Item(itemName);
+        Set(pickup, "inventoryManager", inventory);
+        Set(pickup, "persistentPickupId", id);
+        Set(pickup, "keepForStateRestore", true);
+        Bind(go, required ?? Array.Empty<OnlyOneUnityString>(), new[] { id });
+        if (itemName.StartsWith("PathPiece"))
+            Label(
+                itemName + "Label",
+                go.transform,
+                itemName.Substring(itemName.Length - 1),
+                0,
+                0,
+                -.1f,
+                .5f
+            );
         return go;
     }
 
-    private static void Bind(GameObject go,OnlyOneUnityString[] required,OnlyOneUnityString[] excluded=null)
+    private static void Bind(
+        GameObject go,
+        OnlyOneUnityString[] required,
+        OnlyOneUnityString[] excluded = null
+    )
     {
-        bindings.Add(new ChapterOneStateView.Binding
+        bindings.Add(
+            new ProgressConditionObjectBinding.Binding
+            {
+                target = go,
+                required = required,
+                excluded = excluded ?? Array.Empty<OnlyOneUnityString>(),
+            }
+        );
+    }
+
+    private static GameObject Node(string name, Transform parent, Vector3 position)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = position;
+        return go;
+    }
+
+    private static GameObject Visual(
+        string name,
+        Transform parent,
+        Sprite sprite,
+        float x,
+        float y,
+        float z,
+        float width,
+        float height,
+        bool collider = false
+    )
+    {
+        if (sprite == null)
+            throw new InvalidOperationException("Missing sprite for " + name);
+        GameObject go = Node(name, parent, new Vector3(x, y, z));
+        SpriteRenderer renderer = go.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        if (spriteMaterial != null)
+            renderer.sharedMaterial = spriteMaterial;
+        renderer.sortingOrder = Mathf.RoundToInt((16f - z) * 100f);
+        go.transform.localScale = new Vector3(
+            width / sprite.bounds.size.x,
+            height / sprite.bounds.size.y,
+            1
+        );
+        if (collider)
         {
-            target = go,
-            required = required,
-            excluded = excluded ?? Array.Empty<OnlyOneUnityString>()
-        });
-    }
-
-    private static GameObject Node(string name,Transform parent,Vector3 position)
-    {
-        GameObject go = new GameObject(name); go.transform.SetParent(parent,false); go.transform.localPosition=position; return go;
-    }
-
-    private static GameObject Visual(string name,Transform parent,Sprite sprite,float x,float y,float z,float width,float height,bool collider=false)
-    {
-        if(sprite==null) throw new InvalidOperationException("Missing sprite for "+name);
-        GameObject go=Node(name,parent,new Vector3(x,y,z));
-        SpriteRenderer renderer=go.AddComponent<SpriteRenderer>(); renderer.sprite=sprite;
-        if(spriteMaterial!=null) renderer.sharedMaterial=spriteMaterial;
-        renderer.sortingOrder=Mathf.RoundToInt((16f-z)*100f);
-        go.transform.localScale=new Vector3(width/sprite.bounds.size.x,height/sprite.bounds.size.y,1);
-        if(collider) { var box=go.AddComponent<BoxCollider>(); box.size=new Vector3(sprite.bounds.size.x,sprite.bounds.size.y,.15f); }
+            var box = go.AddComponent<BoxCollider>();
+            box.size = new Vector3(sprite.bounds.size.x, sprite.bounds.size.y, .15f);
+        }
         return go;
     }
 
-    private static TMP_Text Label(string name,Transform parent,string text,float x,float y,float z,float size,Color? color=null)
+    private static TMP_Text Label(
+        string name,
+        Transform parent,
+        string text,
+        float x,
+        float y,
+        float z,
+        float size,
+        Color? color = null
+    )
     {
-        GameObject go=Node(name,parent,new Vector3(x,y,z));
-        TextMeshPro label=go.AddComponent<TextMeshPro>(); label.font=font; label.text=text; label.fontSize=size*10;
-        label.alignment=TextAlignmentOptions.Center; label.color=color??new Color(.21f,.13f,.14f);
-        label.rectTransform.sizeDelta=new Vector2(16,3); label.textWrappingMode=TextWrappingModes.Normal;
-        label.GetComponent<MeshRenderer>().sortingOrder=400;
+        GameObject go = Node(name, parent, new Vector3(x, y, z));
+        TextMeshPro label = go.AddComponent<TextMeshPro>();
+        label.font = font;
+        label.text = text;
+        label.fontSize = size * 10;
+        label.alignment = TextAlignmentOptions.Center;
+        label.color = color ?? new Color(.21f, .13f, .14f);
+        label.rectTransform.sizeDelta = new Vector2(16, 3);
+        label.textWrappingMode = TextWrappingModes.Normal;
+        label.GetComponent<MeshRenderer>().sortingOrder = 400;
         return label;
     }
 
-    private static TMP_Text UiText(string name,Transform parent,string value,Vector2 position,Vector2 size,float fontSize)
+    private static TMP_Text UiText(
+        string name,
+        Transform parent,
+        string value,
+        Vector2 position,
+        Vector2 size,
+        float fontSize
+    )
     {
-        GameObject go=new GameObject(name,typeof(RectTransform),typeof(TextMeshProUGUI)); go.transform.SetParent(parent,false);
-        TextMeshProUGUI text=go.GetComponent<TextMeshProUGUI>(); text.font=font; text.text=value; text.fontSize=fontSize;
-        text.color=new Color(.22f,.13f,.15f); text.alignment=TextAlignmentOptions.Center; text.raycastTarget=false;
-        text.rectTransform.anchorMin=text.rectTransform.anchorMax=new Vector2(.5f,.5f);
-        text.rectTransform.anchoredPosition=position; text.rectTransform.sizeDelta=size;
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+        go.transform.SetParent(parent, false);
+        TextMeshProUGUI text = go.GetComponent<TextMeshProUGUI>();
+        text.font = font;
+        text.text = value;
+        text.fontSize = fontSize;
+        text.color = new Color(.22f, .13f, .15f);
+        text.alignment = TextAlignmentOptions.Center;
+        text.raycastTarget = false;
+        text.rectTransform.anchorMin = text.rectTransform.anchorMax = new Vector2(.5f, .5f);
+        text.rectTransform.anchoredPosition = position;
+        text.rectTransform.sizeDelta = size;
         return text;
     }
 
-    private static ItemData Item(string name)=>AssetDatabase.LoadAssetAtPath<ItemData>(Items+name+".asset");
-    private static Sprite LoadSprite(string name)=>AssetDatabase.LoadAllAssetsAtPath(Art+name+".png").OfType<Sprite>().FirstOrDefault();
+    private static ItemData Item(string name) =>
+        AssetDatabase.LoadAssetAtPath<ItemData>(Items + name + ".asset");
 
-    private static Sprite MakeIcon(string name,int style,Color color)
+    private static Sprite LoadSprite(string name) =>
+        AssetDatabase.LoadAllAssetsAtPath(Art + name + ".png").OfType<Sprite>().FirstOrDefault();
+
+    private static Sprite LoadGeneratedSprite(string name) =>
+        AssetDatabase
+            .LoadAllAssetsAtPath(GeneratedArt + name + ".png")
+            .OfType<Sprite>()
+            .FirstOrDefault();
+
+    private static Sprite[] LoadGeneratedSprites(string name) =>
+        AssetDatabase
+            .LoadAllAssetsAtPath(GeneratedArt + name + ".png")
+            .OfType<Sprite>()
+            .OrderBy(sprite => sprite.name)
+            .ToArray();
+
+    private static Sprite MakeIcon(string name, int style, Color color)
     {
         Directory.CreateDirectory(PlaceholderPath);
-        string path=PlaceholderPath+name+".png";
-        if(!File.Exists(path))
+        string path = PlaceholderPath + name + ".png";
+        if (!File.Exists(path))
         {
-            Texture2D texture=new Texture2D(96,96,TextureFormat.RGBA32,false);
-            for(int y=0;y<96;y++) for(int x=0;x<96;x++)
+            Texture2D texture = new Texture2D(96, 96, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 96; y++)
+            for (int x = 0; x < 96; x++)
             {
-                bool inside=style==5 ? (x-48)*(x-48)+(y-48)*(y-48)<40*40 : x>4&&x<91&&y>10&&y<85;
-                Color pixel=inside?color:Color.clear;
-                if(inside&&style>0&&style<5&&Mathf.Abs(y-48)<7) pixel=new Color(.25f,.17f,.12f);
-                if(inside&&style>0&&style<4&&y>65&&y<74)
-                    for(int dot=0;dot<style;dot++) if(Mathf.Abs(x-(32+dot*15))<4) pixel=Color.white;
-                texture.SetPixel(x,y,pixel);
+                bool inside =
+                    style == 5
+                        ? (x - 48) * (x - 48) + (y - 48) * (y - 48) < 40 * 40
+                        : x > 4 && x < 91 && y > 10 && y < 85;
+                Color pixel = inside ? color : Color.clear;
+                if (inside && style > 0 && style < 5 && Mathf.Abs(y - 48) < 7)
+                    pixel = new Color(.25f, .17f, .12f);
+                if (inside && style > 0 && style < 4 && y > 65 && y < 74)
+                    for (int dot = 0; dot < style; dot++)
+                        if (Mathf.Abs(x - (32 + dot * 15)) < 4)
+                            pixel = Color.white;
+                texture.SetPixel(x, y, pixel);
             }
-            texture.Apply(); File.WriteAllBytes(path,texture.EncodeToPNG()); Object.DestroyImmediate(texture);
+            texture.Apply();
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
         }
-        AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);
-        TextureImporter importer=(TextureImporter)AssetImporter.GetAtPath(path);
-        importer.textureType=TextureImporterType.Sprite; importer.spritePixelsPerUnit=96; importer.filterMode=FilterMode.Point;
-        importer.textureCompression=TextureImporterCompression.Uncompressed; importer.alphaIsTransparency=true; importer.SaveAndReimport();
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spritePixelsPerUnit = 96;
+        importer.filterMode = FilterMode.Point;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.alphaIsTransparency = true;
+        importer.SaveAndReimport();
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
-    private static void EventText(Object target,string field,string message)
+    private static void EventText(Object target, string field, string message)
     {
-        UnityEvent evt=new UnityEvent(); UnityEventTools.AddStringPersistentListener(evt,presentation.Say,message); Set(target,field,evt);
+        UnityEvent evt = new UnityEvent();
+        UnityEventTools.AddStringPersistentListener(evt, presentation.Say, message);
+        Set(target, field, evt);
     }
-    private static void Event(Object target,string field,UnityAction action)
+
+    private static void Event(Object target, string field, UnityAction action)
     {
-        UnityEvent evt=new UnityEvent(); UnityEventTools.AddPersistentListener(evt,action); Set(target,field,evt);
+        UnityEvent evt = new UnityEvent();
+        UnityEventTools.AddPersistentListener(evt, action);
+        Set(target, field, evt);
     }
-    private static T Get<T>(Object target,string field)=>(T)target.GetType().GetField(field,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public).GetValue(target);
-    private static void Set(Object target,string field,object value)
+
+    private static T Get<T>(Object target, string field) =>
+        (T)
+            target
+                .GetType()
+                .GetField(
+                    field,
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+                )
+                .GetValue(target);
+
+    private static void Set(Object target, string field, object value)
     {
-        FieldInfo info=target.GetType().GetField(field,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);
-        if(info==null) throw new MissingFieldException(target.GetType().Name,field);
-        info.SetValue(target,value); EditorUtility.SetDirty(target);
+        FieldInfo info = target
+            .GetType()
+            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (info == null)
+            throw new MissingFieldException(target.GetType().Name, field);
+        info.SetValue(target, value);
+        EditorUtility.SetDirty(target);
+    }
+
+    private static void SetEnum(Object target, string field, int value)
+    {
+        FieldInfo info = target
+            .GetType()
+            .GetField(field, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (info == null)
+            throw new MissingFieldException(target.GetType().Name, field);
+        info.SetValue(target, Enum.ToObject(info.FieldType, value));
+        EditorUtility.SetDirty(target);
     }
 }

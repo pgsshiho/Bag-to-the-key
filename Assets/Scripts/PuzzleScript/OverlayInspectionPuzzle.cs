@@ -10,7 +10,7 @@ public class OverlayInspectionPuzzle : MonoBehaviour, IWorldInteractable
     [SerializeField] private ItemData overlayItem;
     [SerializeField] private Sprite baseSpriteOverride;
     [SerializeField] private Sprite overlaySpriteOverride;
-    [SerializeField] private string displayTitle = "겹쳐 보기";
+    [SerializeField] private string displayTitle;
     [SerializeField, TextArea] private string revealedMessage;
     [SerializeField] private bool requireBaseItemEquipped;
     [SerializeField] private bool consumeItemsOnComplete;
@@ -45,8 +45,11 @@ public class OverlayInspectionPuzzle : MonoBehaviour, IWorldInteractable
             ? overlaySpriteOverride
             : overlayItem?.icon;
 
+        string title = string.IsNullOrWhiteSpace(displayTitle)
+            ? UiTextCatalog.Load().DefaultOverlayTitle
+            : displayTitle;
         PuzzleModalUI.GetOrCreate().ShowOverlay(
-            displayTitle,
+            title,
             baseSprite,
             overlaySprite,
             revealedMessage,

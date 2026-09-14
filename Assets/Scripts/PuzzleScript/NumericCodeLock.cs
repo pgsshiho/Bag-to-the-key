@@ -5,7 +5,7 @@ using UnityEngine.Events;
 public class NumericCodeLock : MonoBehaviour, IWorldInteractable
 {
     [SerializeField]
-    private string displayTitle = "암호 입력";
+    private string displayTitle;
 
     [SerializeField]
     private string expectedCode = "0000";
@@ -24,7 +24,9 @@ public class NumericCodeLock : MonoBehaviour, IWorldInteractable
 
     private PuzzleStateController completion;
 
-    public string DisplayTitle => displayTitle;
+    public string DisplayTitle => string.IsNullOrWhiteSpace(displayTitle)
+        ? UiTextCatalog.Load().DefaultCodeLockTitle
+        : displayTitle;
     public int MaxInputLength => Mathf.Max(maxInputLength, expectedCode?.Length ?? 0);
 
     private void Awake()

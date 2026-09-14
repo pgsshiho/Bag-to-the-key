@@ -192,7 +192,7 @@ public class PuzzleModalUI : MonoBehaviour
         overlayConfirmed = onConfirmed;
         mode = ModalMode.Overlay;
 
-        titleText.text = string.IsNullOrWhiteSpace(title) ? "겹쳐 보기" : title;
+        titleText.text = string.IsNullOrWhiteSpace(title) ? UiTextCatalog.Load().DefaultOverlayTitle : title;
         overlayBaseImage.sprite = baseSprite;
         overlayBaseImage.enabled = baseSprite != null;
         overlayTopImage.sprite = topSprite;
@@ -253,7 +253,7 @@ public class PuzzleModalUI : MonoBehaviour
             return;
         }
 
-        statusText.text = "암호가 맞지 않습니다.";
+        statusText.text = UiTextCatalog.Load().InvalidCodeMessage;
         codeInput.Clear();
         RefreshCodeDisplay();
     }
@@ -267,7 +267,9 @@ public class PuzzleModalUI : MonoBehaviour
 
     private void RefreshCodeDisplay()
     {
-        codeDisplayText.text = codeInput.Length == 0 ? "----" : codeInput.ToString();
+        codeDisplayText.text = codeInput.Length == 0
+            ? UiTextCatalog.Load().EmptyCodePlaceholder
+            : codeInput.ToString();
     }
 
     private static void EnsureEventSystem()

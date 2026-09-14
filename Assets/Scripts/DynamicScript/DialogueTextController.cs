@@ -9,25 +9,44 @@ using UnityEngine;
 public class DialogueTextController : MonoBehaviour
 {
     [Header("Position")]
-    [SerializeField] private bool useCurrentPositionAsShown = true;
-    [SerializeField] private Vector2 shownAnchoredPosition;
-    [SerializeField, Min(0f)] private float hiddenPadding = 24f;
+    [SerializeField]
+    private bool useCurrentPositionAsShown = true;
+
+    [SerializeField]
+    private Vector2 shownAnchoredPosition;
+
+    [SerializeField, Min(0f)]
+    private float hiddenPadding = 24f;
 
     [Header("Animation")]
-    [SerializeField, Min(0f)] private float slideDuration = 0.5f;
-    [SerializeField] private AnimationCurve slideCurve =
-        AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-    [SerializeField, Min(0f)] private float charactersPerSecond = 35f;
-    [SerializeField, Min(0f)] private float hideDelay = 1.5f;
-    [SerializeField, Min(0f)] private float fadeDuration = 0.5f;
+    [SerializeField, Min(0f)]
+    private float slideDuration = 0.5f;
+
+    [SerializeField]
+    private AnimationCurve slideCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [SerializeField, Min(0f)]
+    private float charactersPerSecond = 35f;
+
+    [SerializeField, Min(0f)]
+    private float hideDelay = 1.5f;
+
+    [SerializeField, Min(0f)]
+    private float fadeDuration = 0.5f;
 
     [Header("Input")]
-    [SerializeField] private bool advanceWithLeftClick = true;
-    [SerializeField] private bool advanceWithSpaceOrEnter = true;
+    [SerializeField]
+    private bool advanceWithLeftClick = true;
+
+    [SerializeField]
+    private bool advanceWithSpaceOrEnter = true;
 
     [Header("Optional Preview")]
-    [SerializeField] private bool playPreviewOnStart = false;
-    [SerializeField, TextArea(2, 5)] private List<string> previewLines = new();
+    [SerializeField]
+    private bool playPreviewOnStart = false;
+
+    [SerializeField, TextArea(2, 5)]
+    private List<string> previewLines = new();
 
     public event Action DialogueStarted;
     public event Action<int, string> LineStarted;
@@ -76,15 +95,17 @@ public class DialogueTextController : MonoBehaviour
 
     private void Update()
     {
-        if (!isDialogueActive) return;
+        if (!isDialogueActive)
+            return;
 
-        bool requestedAdvance =
-            advanceWithLeftClick && Input.GetMouseButtonDown(0);
+        bool requestedAdvance = advanceWithLeftClick && Input.GetMouseButtonDown(0);
         requestedAdvance |=
             advanceWithSpaceOrEnter
-            && (Input.GetKeyDown(KeyCode.Space)
+            && (
+                Input.GetKeyDown(KeyCode.Space)
                 || Input.GetKeyDown(KeyCode.Return)
-                || Input.GetKeyDown(KeyCode.KeypadEnter));
+                || Input.GetKeyDown(KeyCode.KeypadEnter)
+            );
 
         if (requestedAdvance)
             Advance();
@@ -116,34 +137,24 @@ public class DialogueTextController : MonoBehaviour
 
     public void PlayDialogue(string line, Action onContinuationRequested)
     {
-        BeginDialogue(
-            new[] { line },
-            onContinuationRequested,
-            slideIn: true);
+        BeginDialogue(new[] { line }, onContinuationRequested, slideIn: true);
     }
 
     public void PlayDialogue(IEnumerable<string> dialogueLines)
     {
-        BeginDialogue(
-            dialogueLines,
-            onContinuationRequested: null,
-            slideIn: true);
+        BeginDialogue(dialogueLines, onContinuationRequested: null, slideIn: true);
     }
 
-    public void ContinueDialogue(
-        string line,
-        Action onContinuationRequested)
+    public void ContinueDialogue(string line, Action onContinuationRequested)
     {
-        BeginDialogue(
-            new[] { line },
-            onContinuationRequested,
-            slideIn: false);
+        BeginDialogue(new[] { line }, onContinuationRequested, slideIn: false);
     }
 
     private void BeginDialogue(
         IEnumerable<string> dialogueLines,
         Action onContinuationRequested,
-        bool slideIn)
+        bool slideIn
+    )
     {
         lines.Clear();
         if (dialogueLines != null)
@@ -155,7 +166,8 @@ public class DialogueTextController : MonoBehaviour
             }
         }
 
-        if (lines.Count == 0) return;
+        if (lines.Count == 0)
+            return;
 
         StopCurrentAnimations();
         StopReleaseWorldInteraction();
@@ -170,8 +182,7 @@ public class DialogueTextController : MonoBehaviour
         dialogueText.maxVisibleCharacters = 0;
 
         RecalculateHiddenPosition();
-        textRect.anchoredPosition =
-            slideIn ? hiddenAnchoredPosition : shownAnchoredPosition;
+        textRect.anchoredPosition = slideIn ? hiddenAnchoredPosition : shownAnchoredPosition;
         DialogueStarted?.Invoke();
 
         if (slideIn)
@@ -188,13 +199,17 @@ public class DialogueTextController : MonoBehaviour
 
     public void Advance()
     {
-        if (!isDialogueActive) return;
+        if (!isDialogueActive)
+            return;
 
         if (isTyping)
         {
             CompleteCurrentLineImmediately();
             return;
         }
+
+        if (TryStartNextLine())
+            return;
 
         if (continuationRequested != null)
         {
@@ -227,11 +242,11 @@ public class DialogueTextController : MonoBehaviour
                 () => textRect.anchoredPosition,
                 value => textRect.anchoredPosition = value,
                 shownAnchoredPosition,
-                slideDuration)
+                slideDuration
+            )
             .SetUpdate(true);
 
-        slideTween.SetEase(
-            slideCurve != null ? slideCurve : AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        slideTween.SetEase(slideCurve != null ? slideCurve : AnimationCurve.Linear(0f, 0f, 1f, 1f));
         slideTween.OnComplete(CompleteSlideIn);
     }
 
@@ -269,7 +284,8 @@ public class DialogueTextController : MonoBehaviour
                 () => dialogueText.maxVisibleCharacters,
                 value => dialogueText.maxVisibleCharacters = value,
                 characterCount,
-                duration)
+                duration
+            )
             .SetEase(Ease.Linear)
             .SetUpdate(true)
             .OnComplete(CompleteTyping);
@@ -298,8 +314,7 @@ public class DialogueTextController : MonoBehaviour
         hideTween = null;
         continuationRequested = null;
         isDialogueActive = false;
-        releaseWorldInteractionRoutine =
-            StartCoroutine(ReleaseWorldInteractionAtEndOfFrame());
+        releaseWorldInteractionRoutine = StartCoroutine(ReleaseWorldInteractionAtEndOfFrame());
         DialogueCompleted?.Invoke();
     }
 
@@ -313,13 +328,11 @@ public class DialogueTextController : MonoBehaviour
 
         if (fadeDuration > 0f)
         {
-            sequence.Append(DOTween
-                .To(
-                    () => dialogueText.color.a,
-                    SetTextAlpha,
-                    0f,
-                    fadeDuration)
-                .SetEase(Ease.OutQuad));
+            sequence.Append(
+                DOTween
+                    .To(() => dialogueText.color.a, SetTextAlpha, 0f, fadeDuration)
+                    .SetEase(Ease.OutQuad)
+            );
         }
         else
         {
@@ -332,11 +345,25 @@ public class DialogueTextController : MonoBehaviour
     private void CompleteHide()
     {
         hideTween = null;
+
+        if (TryStartNextLine())
+            return;
+
         dialogueText.text = string.Empty;
         dialogueText.maxVisibleCharacters = 0;
         textRect.anchoredPosition = hiddenAnchoredPosition;
         SetTextAlpha(visibleTextAlpha);
         CompleteDialogue();
+    }
+
+    private bool TryStartNextLine()
+    {
+        if (currentLineIndex >= lines.Count - 1)
+            return false;
+
+        currentLineIndex++;
+        StartTypingCurrentLine();
+        return true;
     }
 
     private IEnumerator ReleaseWorldInteractionAtEndOfFrame()
@@ -349,8 +376,7 @@ public class DialogueTextController : MonoBehaviour
     private void RecalculateHiddenPosition()
     {
         float textHeight = textRect != null ? textRect.rect.height : 0f;
-        hiddenAnchoredPosition = shownAnchoredPosition
-            + Vector2.up * (textHeight + hiddenPadding);
+        hiddenAnchoredPosition = shownAnchoredPosition + Vector2.up * (textHeight + hiddenPadding);
     }
 
     private void StopCurrentAnimations()
@@ -368,7 +394,8 @@ public class DialogueTextController : MonoBehaviour
 
     private void StopReleaseWorldInteraction()
     {
-        if (releaseWorldInteractionRoutine == null) return;
+        if (releaseWorldInteractionRoutine == null)
+            return;
 
         StopCoroutine(releaseWorldInteractionRoutine);
         releaseWorldInteractionRoutine = null;

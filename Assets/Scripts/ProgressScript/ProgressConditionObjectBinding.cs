@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Visual state is derived from the same IDs that SaveLoadManager persists.
-public class ChapterOneStateView : MonoBehaviour
+public class ProgressConditionObjectBinding : MonoBehaviour
 {
     [Serializable]
     public class Binding

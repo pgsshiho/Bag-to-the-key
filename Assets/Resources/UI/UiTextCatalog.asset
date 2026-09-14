@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c55f583c5824257b4a01748e166af0f, type: 3}
+  m_Name: UiTextCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::UiTextCatalog
+  defaultOverlayTitle: "\uACB9\uCCD0 \uBCF4\uAE30"
+  defaultCodeLockTitle: "\uC554\uD638 \uC785\uB825"
+  invalidCodeMessage: "\uC554\uD638\uAC00 \uB9DE\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
+  emptyCodePlaceholder: ----
+  saveGameTitle: SAVE GAME
+  loadGameTitle: LOAD GAME
+  manualSlotFormat: "SLOT {0}"
+  autoSaveLabel: AUTOSAVE
+  emptySlotLabel: EMPTY
+  corruptedSlotLabel: CORRUPTED

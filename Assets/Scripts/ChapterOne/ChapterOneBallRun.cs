@@ -75,7 +75,7 @@ public class ChapterOneBallRun : MonoBehaviour
         WorldInteractionGate.Block(this);
         ball.position = waypoints[0].position;
         ResetBallVisual();
-        presentation.SetHint("조각들이 하나의 길이 되었어. 공이 끝까지 갈 수 있을까?");
+        presentation.ShowBallTrackStartedHint();
         // Resuming after a save during the animation replays this transient motion.
         float segmentDuration = Mathf.Max(0.01f, duration / (waypoints.Length - 1));
         for (int i = 1; i < waypoints.Length; i++)
@@ -98,7 +98,7 @@ public class ChapterOneBallRun : MonoBehaviour
         GameProgressState.CompletePuzzle(ballFinishedId);
         WorldInteractionGate.Unblock(this);
         routine = null;
-        presentation.Say("꼬맹이, 해냈구나. 장치 아래의 고양이 인형을 가져와 줄래?");
+        presentation.ShowBallTrackCompletedDialogue();
     }
 
     private Tween CreateHoleExitTween()

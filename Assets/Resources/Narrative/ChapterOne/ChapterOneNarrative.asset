@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93fe686b6ea14b52bbb24b0b2ec1db5a, type: 3}
+  m_Name: ChapterOneNarrative
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterOneNarrativeDefinition
+  introductionId: {fileID: 11400000, guid: ff117cd25b315ca4f93d67a9b86441ec, type: 2}
+  openingDialogue: {fileID: 11400000, guid: 34e955e7351c4ce990f3fe5216a85b29, type: 2}
+  objectiveRules:
+  - required:
+    - {fileID: 11400000, guid: 56c4118cdc73d8a4981ce28248f21cf9, type: 2}
+    excluded: []
+    text: "\uC9D1\uC5D0\uC11C \uBB38\uC744 \uC5F4\uACE0 \uB098\uAC00\uB77C  \xB7 \uBD84\uD64D\uC0C9 \uACF5\uC744 \uCC59\uAE34 \uB4A4 \uCD9C\uAD6C\uB85C"
+  - required: []
+    excluded: []
+    text: "\uC9D1\uC5D0\uC11C \uBB38\uC744 \uC5F4\uACE0 \uB098\uAC00\uB77C"
+  parentHintRules:
+  - required:
+    - {fileID: 11400000, guid: 56c4118cdc73d8a4981ce28248f21cf9, type: 2}
+    excluded: []
+    text: "\uC798\uD588\uC5B4, \uAF2C\uB9F9\uC774. \uC7A5\uCE58 \uC544\uB798\uC758 \uD551\uD06C \uACF5\uB3C4 \uCC59\uACBC\uB2C8? \uC774\uC81C \uBB38\uC744 \uC5F4\uACE0 \uB2E4\uC74C \uAC78\uC74C\uC744 \uB0B4\uB514\uB514\uC5B4 \uBCF4\uB834."
+  - required:
+    - {fileID: 11400000, guid: 8111b779b96dc3d45961aad89d9ac0c4, type: 2}
+    excluded: []
+    text: "\uACE0\uC591\uC774 \uC778\uD615\uC744 \uC7A5\uCC29\uD55C \uB4A4 \uB098\uC5D0\uAC8C \uAC74\uB124 \uC8FC\uB834."
+  - required:
+    - {fileID: 11400000, guid: 38010d9e8f6af4543b5ba8fd1800b89c, type: 2}
+    - {fileID: 11400000, guid: 4df3bf44484b03848a7f9c6d549f5ff3, type: 2}
+    excluded: []
+    text: "\uAC00\uBC29 \uC548\uC5D0\uC11C \uAE38 \uC870\uAC01\uC744 A, B, C \uC21C\uC11C\uB85C \uB098\uB780\uD788 \uBD99\uC5EC \uBD10. \uC870\uD569 \uBC84\uD2BC\uC744 \uB204\uB974\uBA74 \uD558\uB098\uC758 \uAE38\uC774 \uB420 \uAC70\uC57C."
+  - required:
+    - {fileID: 11400000, guid: 4c1301a7365bcdc478bba92f640cf674, type: 2}
+    excluded: []
+    text: "\uD14C\uC774\uBE14\uC5D0\uB294 \uAC08\uC0C9 \uACF0\uC774 \uC67C\uCABD, \uD0A4 \uD070 \uD770 \uD1A0\uB07C\uAC00 \uC624\uB978\uCABD\uC774\uB780\uB2E4. \uCC45\uB4E4\uC740 \uC7A5\uCC29\uD55C \uB4A4 \uCC45\uC7A5\uC758 \uBE48\uC790\uB9AC\uC5D0 \uB193\uC544 \uBCF4\uB834."
+  - required:
+    - {fileID: 11400000, guid: bb09c66f26017b6439280d41cfbdc81d, type: 2}
+    excluded: []
+    text: "\uC791\uC740 \uAD6C\uBA4D\uC73C\uB85C \uB4E4\uC5EC\uB2E4\uBCF4\uBA74, \uC0C1\uC790\uB97C \uC5F4 \uC22B\uC790\uAC00 \uBCF4\uC77C\uC9C0\uB3C4 \uBAB0\uB77C."
+  - required: []
+    excluded: []
+    text: "\uBE48\uC190\uC774\uC5B4\uB3C4 \uAD1C\uCC2E\uC544. \uC624\uB978\uCABD \uD070 \uC0C1\uC790\uB97C \uD55C \uBC88 \uBC00\uC5B4 \uBCF4\uB834."
+  clueHint: "\uAD6C\uBA4D \uB108\uBA38\uC758 \uC22B\uC790\uB97C \uC67C\uCABD\uBD80\uD130 \uAE30\uC5B5\uD558\uC790.  [ESC] \uBC29\uC73C\uB85C \uB3CC\uC544\uAC00\uAE30"
+  ballTrackStartedHint: "\uC870\uAC01\uB4E4\uC774 \uD558\uB098\uC758 \uAE38\uC774 \uB418\uC5C8\uC5B4. \uACF5\uC774 \uB05D\uAE4C\uC9C0 \uAC08 \uC218 \uC788\uC744\uAE4C?"
+  ballTrackCompletedDialogue: {fileID: 11400000, guid: 9007ec7f9eb646de903aa40597492ccc, type: 2}

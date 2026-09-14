@@ -97,7 +97,10 @@ public class SaveSlotMenuController : MonoBehaviour
     {
         if (saveLoadManager == null || panel == null) return;
 
-        title.text = mode == SaveSlotMenuMode.Save ? "SAVE GAME" : "LOAD GAME";
+        UiTextCatalog textCatalog = UiTextCatalog.Load();
+        title.text = mode == SaveSlotMenuMode.Save
+            ? textCatalog.SaveGameTitle
+            : textCatalog.LoadGameTitle;
         SaveSlotInfo[] slots = saveLoadManager.GetSaveSlots();
 
         for (int i = 0; i < SaveLoadManager.ManualSlotCount; i++)
@@ -107,7 +110,11 @@ public class SaveSlotMenuController : MonoBehaviour
             Button button = manualSlotButtons[i];
             TMP_Text label = manualSlotLabels[i];
 
-            label.text = FormatSlotLabel($"SLOT {slotNumber}", info);
+            label.text = FormatSlotLabel(
+                string.Format(textCatalog.ManualSlotFormat, slotNumber),
+                info,
+                textCatalog
+            );
             button.onClick.RemoveAllListeners();
 
             if (mode == SaveSlotMenuMode.Save)
@@ -132,7 +139,7 @@ public class SaveSlotMenuController : MonoBehaviour
 
         SaveSlotInfo autoSaveInfo = slots[SaveLoadManager.ManualSlotCount];
         autoSaveButton.gameObject.SetActive(mode == SaveSlotMenuMode.Load);
-        autoSaveLabel.text = FormatSlotLabel("AUTOSAVE", autoSaveInfo);
+        autoSaveLabel.text = FormatSlotLabel(textCatalog.AutoSaveLabel, autoSaveInfo, textCatalog);
         autoSaveButton.interactable = autoSaveInfo.isValid;
         autoSaveButton.onClick.RemoveAllListeners();
         autoSaveButton.onClick.AddListener(() =>
@@ -142,10 +149,14 @@ public class SaveSlotMenuController : MonoBehaviour
         });
     }
 
-    private static string FormatSlotLabel(string prefix, SaveSlotInfo info)
+    private static string FormatSlotLabel(
+        string prefix,
+        SaveSlotInfo info,
+        UiTextCatalog textCatalog
+    )
     {
-        if (!info.exists) return $"{prefix}    EMPTY";
-        if (!info.isValid) return $"{prefix}    CORRUPTED";
+        if (!info.exists) return $"{prefix}    {textCatalog.EmptySlotLabel}";
+        if (!info.isValid) return $"{prefix}    {textCatalog.CorruptedSlotLabel}";
 
         string savedAt = string.Empty;
         if (DateTime.TryParse(
